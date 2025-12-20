@@ -2,12 +2,14 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import { useNavigation } from '@react-navigation/native';
 
-const Header = ({ title = "STRATASOUND MUSIC", coins = 25, onMenuPress }) => {
+const Header = ({ title = "STRATASOUND MUSIC", coins = 25, Navigation }) => {
+    const navigation = useNavigation();
     return (
         <View>
-            <View style={styles.header}>
-                <TouchableOpacity onPress={onMenuPress}>
+            <View style={styles.header}> 
+                <TouchableOpacity onPress={()=>navigation.navigate('MenuScreen')}>
                     <MaterialIcons name="menu" size={28} color="#fff" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>{title}</Text>

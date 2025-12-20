@@ -3,7 +3,7 @@
 export const Colors = {
     //GRADIENT COLORS
   top: "#0066CC",       // Purple
-  middle: "#009999", 
+  middle: "rgba(0, 153, 153, 1)", 
   bottom: "#66cc33",
   logo: "#FFFFFF",  
 //   background: "#F3F4F6",    // Light gray
