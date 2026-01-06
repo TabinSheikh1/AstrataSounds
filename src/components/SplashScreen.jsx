@@ -130,9 +130,9 @@ const SplashScreen = () => {
         </View> */}
 
         {/* Branding Text */}
-        <Animated.View style={[styles.footer, { opacity: fadeAnim }]}>
+        {/* <Animated.View style={[styles.footer, { opacity: fadeAnim }]}>
           <Text style={styles.footerText}>PREMIUM AUDIO EXPERIENCE</Text>
-        </Animated.View>
+        </Animated.View> */}
       </LinearGradient>
     </View>
   );

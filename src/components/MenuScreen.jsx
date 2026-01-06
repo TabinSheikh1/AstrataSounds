@@ -19,6 +19,8 @@ import {
     FileText,
     ShieldCheck,
     RefreshCw,
+    Trophy,
+    Mic,
     Facebook,
     Twitter,
     Youtube,
@@ -107,6 +109,8 @@ const MenuScreen = () => {
                     <MenuItem icon={Share2} label="Share Musicful" />
                     <View style={styles.separator} />
                     <MenuItem icon={MessageSquare} label="Help Us Improve" />
+                    <MenuItem icon={Trophy} label="Leaderboard" onPress={()=>navigation.navigate('LeaderBoardScreen')} />
+                    <MenuItem icon={Mic} label="Singers" onPress={()=>navigation.navigate('SingersScreen')} />
                 </View>
 
                 {/* Group 2: Legal & Support */}

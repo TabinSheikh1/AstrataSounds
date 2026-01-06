@@ -5,6 +5,8 @@ import CustomBottomTabBar from './CustomBottomTabBar';
 import LibraryHomeScreen from '../components/LibraryHomeScreen'
 import SongCreationScreen from '../components/SongCreationScreen'
 import MenuScreen from '../components/MenuScreen'
+import LeaderBoardScreen from '../components/LeaderBoardScreen';
+import SingersScreen from '../components/SingersScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -20,6 +22,8 @@ const MainTabNavigator = () => {
             <Tab.Screen name="LibraryHomeScreen" component={LibraryHomeScreen} />
             <Tab.Screen name="SongCreationScreen" component={SongCreationScreen} />
             <Tab.Screen name="MenuScreen" component={MenuScreen} />
+            <Tab.Screen name="LeaderBoardScreen" component={LeaderBoardScreen} />
+            <Tab.Screen name="SingersScreen" component={SingersScreen} />
 
         </Tab.Navigator>
     );
