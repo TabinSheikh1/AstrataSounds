@@ -7,16 +7,24 @@ import {
   ScrollView,
   ImageBackground,
   TextInput,
-  Switch,
 } from 'react-native';
 import Header from './Header';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { Search, Plus, HelpCircle, Music2, Mic, CloudUpload } from 'lucide-react-native';
+import TrackPlayer from 'react-native-track-player';
+import { generateSong } from '../service/index';
+
+// ⚠️ CHANGE THIS BASE URL ACCORDING TO DEVICE
+// Android Emulator → http://10.0.2.2:3000
+// iOS Simulator → http://localhost:3000
+// Real Device → http://YOUR_LAN_IP:3000
+const BASE_URL = 'http://localhost:3000';
 
 const SongCreationScreen = () => {
   const [selectedTab, setSelectedTab] = useState('Lyrics');
+  const [loading, setLoading] = useState(false);
 
-  // Form States
+  // ---------------- FORM STATES ----------------
   const [isInstrumental, setIsInstrumental] = useState(false);
   const [gender, setGender] = useState('Male');
   const [styleText, setStyleText] = useState('');
@@ -24,27 +32,75 @@ const SongCreationScreen = () => {
   const [titleText, setTitleText] = useState('');
   const [selectedStyle, setSelectedStyle] = useState('Pop');
 
+  // ---------------- AUDIO ----------------
+  async function playSong(url, title) {
+    try {
+      await TrackPlayer.reset();
+
+      await TrackPlayer.add({
+        id: 'generated-song',
+        url,
+        title: title || 'StrataSound AI',
+        artist: 'StrataSound AI',
+      });
+
+      await TrackPlayer.play();
+    } catch (err) {
+      console.error('Audio playback error:', err);
+    }
+  }
+
+  const playAudio = async (result) => {
+    const fileUrl =
+      result.songUrl ||
+      result.music?.url ||
+      result.vocals?.url;
+
+    if (!fileUrl) {
+      console.error('No audio URL returned');
+      return;
+    }
+
+    await playSong(`${BASE_URL}${fileUrl}`, result.title);
+  };
+
+  // ---------------- CREATE ----------------
+  const handleCreate = async () => {
+    try {
+      setLoading(true);
+
+      const payload = {
+        title: titleText,
+        stylePrompt: styleText,
+        category: selectedStyle.toLowerCase(),
+        gender: gender.toLowerCase(),
+        description: styleText,
+        lyrics: lyricsText.trim() ? lyricsText : undefined,
+        music: true,
+        vocals: true,
+      };
+
+      const result = await generateSong(payload);
+      await playAudio(result);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ---------------- UI ----------------
   const renderContent = () => {
     if (selectedTab === 'Lyrics') {
       return (
         <ScrollView style={styles.formContainer} showsVerticalScrollIndicator={false}>
-
-          {/* Style of Music */}
           <View style={styles.sectionHeader}>
             <View style={styles.row}>
               <Text style={styles.label}>Style Of Music</Text>
               <HelpCircle size={18} color="white" style={styles.helpIcon} />
             </View>
-            <View style={styles.row}>
-              <Text style={styles.instrumentalLabel}>Instrumental</Text>
-              <Switch
-                value={isInstrumental}
-                style={{ marginBottom: 2 }}
-                onValueChange={setIsInstrumental}
-                trackColor={{ false: "#767577", true: "#fff" }}
-              />
-            </View>
           </View>
+
           <View style={styles.inputBox}>
             <TextInput
               style={styles.textArea}
@@ -54,6 +110,7 @@ const SongCreationScreen = () => {
               onChangeText={setStyleText}
             />
             <Text style={styles.charCount}>{styleText.length}/200</Text>
+
             <View style={styles.tagRow}>
               {['Pop', 'Rop', 'Hip Hop', 'More'].map((tag) => {
                 const isSelected = selectedStyle === tag;
@@ -63,29 +120,30 @@ const SongCreationScreen = () => {
                     onPress={() => setSelectedStyle(tag)}
                     style={[
                       styles.tag,
-                      isSelected && { backgroundColor: '#4CAF50' } // Changes bg to green when selected
+                      isSelected && { backgroundColor: '#4CAF50' },
                     ]}
                   >
-                    <Text style={[
-                      styles.tagText,
-                      isSelected && { color: '#fff' } // Changes text to white when selected
-                    ]}>
+                    <Text
+                      style={[
+                        styles.tagText,
+                        isSelected && { color: '#fff' },
+                      ]}
+                    >
                       {tag}
                     </Text>
                   </TouchableOpacity>
                 );
               })}
-
             </View>
           </View>
 
-          {/* Lyrics Section */}
           <View style={styles.sectionHeader}>
             <View style={styles.row}>
               <Text style={styles.label}>Lyrics</Text>
               <HelpCircle size={18} color="white" style={styles.helpIcon} />
             </View>
           </View>
+
           <View style={styles.inputBox}>
             <TextInput
               style={[styles.textArea, { height: 100 }]}
@@ -95,36 +153,38 @@ const SongCreationScreen = () => {
               onChangeText={setLyricsText}
             />
             <Text style={styles.charCount}>{lyricsText.length}/3000</Text>
+
             <View style={styles.tagRow}>
-              <TouchableOpacity style={styles.tag}><Text style={styles.tagText}>Write Lyrics For Me</Text></TouchableOpacity>
+              <TouchableOpacity style={styles.tag}>
+                <Text style={styles.tagText}>Write Lyrics For Me</Text>
+              </TouchableOpacity>
               <Music2 size={18} color="white" style={{ marginLeft: 10 }} />
             </View>
           </View>
 
-          {/* Gender Section */}
           <Text style={styles.label}>Gender</Text>
           <View style={styles.genderRow}>
             {['Male', 'Female', 'Random'].map((g) => (
               <TouchableOpacity
                 key={g}
                 onPress={() => setGender(g)}
-                style={[styles.genderBtn, gender === g && styles.activeGenderBtn]}
+                style={[
+                  styles.genderBtn,
+                  gender === g && styles.activeGenderBtn,
+                ]}
               >
-                <Text style={[styles.genderBtnText, gender === g && { color: '#fff' }]}>{g}</Text>
+                <Text
+                  style={[
+                    styles.genderBtnText,
+                    gender === g && { color: '#fff' },
+                  ]}
+                >
+                  {g}
+                </Text>
               </TouchableOpacity>
             ))}
           </View>
 
-          {/* Vibe Section */}
-          <View style={styles.row}>
-            <Text style={styles.label}>Vibe</Text>
-            <HelpCircle size={18} color="white" style={styles.helpIcon} />
-          </View>
-          <TouchableOpacity style={styles.addVibeBtn}>
-            <Text style={styles.addVibeText}>+ Add Vibe</Text>
-          </TouchableOpacity>
-
-          {/* Title Section */}
           <Text style={styles.label}>Title</Text>
           <View style={[styles.inputBox, { height: 90 }]}>
             <TextInput
@@ -133,38 +193,24 @@ const SongCreationScreen = () => {
               placeholderTextColor="rgba(255,255,255,0.6)"
               onChangeText={setTitleText}
             />
-            <Text style={{ color: 'rgba(255,255,255,0.6)', bottom: 50, left: 320, fontSize: 12 }}>{titleText.length}/80</Text>
+            <Text style={{ color: 'rgba(255,255,255,0.6)', bottom: 50, left: 320, fontSize: 12 }}>
+              {titleText.length}/80
+            </Text>
           </View>
-
-          {/* Create Button */}
-          <TouchableOpacity style={styles.createBtn}>
-            <Text style={styles.createBtnText}>CREATE NOW</Text>
-          </TouchableOpacity>
-
-
         </ScrollView>
       );
     }
+
     if (selectedTab === 'Description') {
       return (
         <ScrollView style={styles.formContainer} showsVerticalScrollIndicator={false}>
-
-          {/* Style of Music */}
           <View style={styles.sectionHeader}>
             <View style={styles.row}>
               <Text style={styles.label}>Style Of Description</Text>
               <HelpCircle size={18} color="white" style={styles.helpIcon} />
             </View>
-            <View style={styles.row}>
-              <Text style={styles.instrumentalLabel}>Instrumental</Text>
-              <Switch
-                value={isInstrumental}
-                style={{ marginBottom: 2 }}
-                onValueChange={setIsInstrumental}
-                trackColor={{ false: "#767577", true: "#fff" }}
-              />
-            </View>
           </View>
+
           <View style={[styles.inputBox, { height: 220 }]}>
             <TextInput
               style={styles.textArea}
@@ -173,15 +219,23 @@ const SongCreationScreen = () => {
               multiline
               onChangeText={setStyleText}
             />
-            <Text style={[styles.charCount, { marginTop: 70, top: 20 }]}>{styleText.length}/200</Text>
+            <Text style={[styles.charCount, { marginTop: 70, top: 20 }]}>
+              {styleText.length}/200
+            </Text>
             <TouchableOpacity style={styles.getInsBtn}>
               <Text style={styles.getInsBtnTxt}>Get Inspired</Text>
             </TouchableOpacity>
           </View>
-          <TouchableOpacity style={styles.createBtn}>
-            <Text style={styles.createBtnText}>CREATE NOW</Text>
-          </TouchableOpacity>
 
+          <TouchableOpacity
+            style={styles.createBtn}
+            onPress={handleCreate}
+            disabled={loading}
+          >
+            <Text style={styles.createBtnText}>
+              {loading ? 'CREATING...' : 'CREATE NOW'}
+            </Text>
+          </TouchableOpacity>
         </ScrollView>
       );
     }
@@ -189,7 +243,6 @@ const SongCreationScreen = () => {
     if (selectedTab === 'Audio') {
       return (
         <View style={styles.audioContainer}>
-          {/* Title and Instruction */}
           <Text style={styles.audioTitleText}>
             Use reference audio to create songs/vibe
           </Text>
@@ -198,13 +251,11 @@ const SongCreationScreen = () => {
             2minor longer. Maximum 40MB.)
           </Text>
 
-          {/* Upload Button */}
           <TouchableOpacity style={styles.outlineButton}>
             <CloudUpload color="white" size={20} style={styles.buttonIcon} />
             <Text style={styles.outlineButtonText}>Upload</Text>
           </TouchableOpacity>
 
-          {/* Record Button */}
           <TouchableOpacity style={styles.outlineButton}>
             <Mic color="white" size={20} style={styles.buttonIcon} />
             <Text style={styles.outlineButtonText}>Record</Text>
@@ -212,6 +263,7 @@ const SongCreationScreen = () => {
         </View>
       );
     }
+
     return null;
   };
 
@@ -222,7 +274,7 @@ const SongCreationScreen = () => {
       resizeMode="cover"
     >
       <View style={styles.container}>
-        <Header title="STRATASOUND MUSIC" coins={25} onMenuPress={() => console.log("Menu")} />
+        <Header title="STRATASOUND MUSIC" coins={25} onMenuPress={() => console.log('Menu')} />
 
         <View style={{ height: 50 }}>
           <ScrollView horizontal style={styles.tabs} showsHorizontalScrollIndicator={false}>
@@ -234,7 +286,9 @@ const SongCreationScreen = () => {
                   onPress={() => setSelectedTab(tab)}
                   style={[styles.tabItem, isSelected && styles.activeTab]}
                 >
-                  <Text style={[styles.tabText, { color: isSelected ? '#fff' : 'rgba(255,255,255,0.6)' }]}>{tab}</Text>
+                  <Text style={[styles.tabText, { color: isSelected ? '#fff' : 'rgba(255,255,255,0.6)' }]}>
+                    {tab}
+                  </Text>
                 </TouchableOpacity>
               );
             })}
@@ -246,6 +300,7 @@ const SongCreationScreen = () => {
     </ImageBackground>
   );
 };
+
 
 const styles = StyleSheet.create({
   getInsBtn: {
@@ -284,7 +339,7 @@ const styles = StyleSheet.create({
   activeTab: {
     borderBottomWidth: 1,
     borderBottomColor: '#fff',
-    marginBottom:12,
+    marginBottom: 12,
   },
   tabText: {
     fontSize: 15,
@@ -441,7 +496,7 @@ const styles = StyleSheet.create({
   },
   outlineButton: {
     flexDirection: 'row',
-    alignItems:'center',
+    alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1.5,
     borderColor: 'rgba(255, 255, 255, 1)', // White outline
@@ -449,7 +504,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     width: '100%',
     marginBottom: 15,
-    height:58,
+    height: 58,
     backgroundColor: 'rgba(255, 255, 255, 0.25)', // Very subtle glass effect
   },
   outlineButtonText: {
@@ -459,7 +514,7 @@ const styles = StyleSheet.create({
   },
   buttonIcon: {
     marginRight: 12,
-    marginTop:5
+    marginTop: 5
   },
 });
 
