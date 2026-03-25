@@ -1,32 +1,67 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
     View,
     Text,
     StyleSheet,
-    TextInput,
     TouchableOpacity,
     KeyboardAvoidingView,
     Platform,
     Image,
-    Dimensions,
-    ScrollView
+    ScrollView,
+    Animated,
+    Easing,
+    StatusBar,
 } from 'react-native';
 import GradientBackground from './GradientBackground';
-import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import InputField from './InputField';
 import SuccessModal from './SuccessModal';
-
-
-const { width } = Dimensions.get('window');
 
 const ResetPasswordScreen = () => {
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
     const [modalVisible, setModalVisible] = useState(false);
     const [error, setError] = useState('');
+
+    const headerOpacity = useRef(new Animated.Value(0)).current;
+    const headerSlide = useRef(new Animated.Value(-30)).current;
+    const formOpacity = useRef(new Animated.Value(0)).current;
+    const formSlide = useRef(new Animated.Value(30)).current;
+    const buttonScale = useRef(new Animated.Value(1)).current;
+
+    useEffect(() => {
+        Animated.stagger(150, [
+            Animated.parallel([
+                Animated.timing(headerOpacity, {
+                    toValue: 1,
+                    duration: 700,
+                    easing: Easing.out(Easing.cubic),
+                    useNativeDriver: true,
+                }),
+                Animated.timing(headerSlide, {
+                    toValue: 0,
+                    duration: 700,
+                    easing: Easing.out(Easing.cubic),
+                    useNativeDriver: true,
+                }),
+            ]),
+            Animated.parallel([
+                Animated.timing(formOpacity, {
+                    toValue: 1,
+                    duration: 700,
+                    easing: Easing.out(Easing.cubic),
+                    useNativeDriver: true,
+                }),
+                Animated.timing(formSlide, {
+                    toValue: 0,
+                    duration: 700,
+                    easing: Easing.out(Easing.cubic),
+                    useNativeDriver: true,
+                }),
+            ]),
+        ]).start();
+    }, []);
 
     const handleContinue = () => {
         if (!password || !confirmPassword) {
@@ -38,113 +73,189 @@ const ResetPasswordScreen = () => {
             return;
         }
         setError('');
-        setModalVisible(true); // Show success modal
+        Animated.sequence([
+            Animated.timing(buttonScale, { toValue: 0.95, duration: 90, useNativeDriver: true }),
+            Animated.timing(buttonScale, { toValue: 1, duration: 90, useNativeDriver: true }),
+        ]).start(() => setModalVisible(true));
     };
 
     return (
         <GradientBackground opacity={0.9}>
-            <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-                <ScrollView contentContainerStyle={{ flexGrow: 1, alignItems: 'center', paddingHorizontal: 24 }}>
-                    <View style={{ alignItems: 'center', marginTop: 90 }}>
-                        <Image source={require('../assets/images/Reset-Password.png')} style={{ width: 220, height: 220 }} resizeMode="contain" />
-                    </View>
+            <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
 
-                    <Text style={{ fontFamily: 'Oswald-Bold', fontSize: 28, color: '#fff', marginVertical: 20, textTransform: 'uppercase' }}>
-                        Reset Password
-                    </Text>
-
-                    <InputField
-                        placeholder="Password"
-                        value={password}
-                        onChangeText={setPassword}
-                        secureTextEntry={!showPassword} // toggle visibility
-                        rightIcon={showPassword ? 'visibility' : 'visibility-off'}
-                        onRightIconPress={() => setShowPassword(!showPassword)}
-                        iconName="lock"
-                    />
-
-                    <InputField
-                        placeholder="Confirm Password"
-                        value={confirmPassword}
-                        onChangeText={setConfirmPassword}
-                        secureTextEntry={!showConfirmPassword} // toggle visibility
-                        rightIcon={showConfirmPassword ? 'visibility' : 'visibility-off'}
-                        onRightIconPress={() => setShowConfirmPassword(!showConfirmPassword)}
-                        iconName="lock"
-                    />
-
-                    {error ? <Text style={{ color: 'red', marginBottom: 10 }}>{error}</Text> : null}
-
-                    <TouchableOpacity
-                        style={{ width: '100%', height: 50, backgroundColor: '#0582ff', borderRadius: 7, justifyContent: 'center', alignItems: 'center', marginTop: 20 }}
-                        onPress={handleContinue}
+            <KeyboardAvoidingView
+                style={styles.container}
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+            >
+                <ScrollView
+                    contentContainerStyle={styles.scrollContent}
+                    keyboardShouldPersistTaps="handled"
+                    showsVerticalScrollIndicator={false}
+                >
+                    {/* Header */}
+                    <Animated.View
+                        style={[
+                            styles.headerSection,
+                            {
+                                opacity: headerOpacity,
+                                transform: [{ translateY: headerSlide }],
+                            },
+                        ]}
                     >
-                        <Text style={{ color: '#fff', fontSize: 18, fontFamily: 'Oswald-Bold', textTransform: 'uppercase' }}>
-                            Continue
-                        </Text>
-                    </TouchableOpacity>
+                        <View style={styles.imageContainer}>
+                            <Image
+                                source={require('../assets/images/Reset-Password.png')}
+                                style={styles.illustration}
+                                resizeMode="contain"
+                            />
+                        </View>
+                        <Text style={styles.title}>Reset Password</Text>
+                        <Text style={styles.subtitle}>Choose a strong new password</Text>
+                    </Animated.View>
+
+                    {/* Form */}
+                    <Animated.View
+                        style={[
+                            styles.formSection,
+                            {
+                                opacity: formOpacity,
+                                transform: [{ translateY: formSlide }],
+                            },
+                        ]}
+                    >
+                        <InputField
+                            placeholder="New Password"
+                            value={password}
+                            onChangeText={(text) => { setPassword(text); setError(''); }}
+                            secureTextEntry={!showPassword}
+                            rightIcon={showPassword ? 'visibility' : 'visibility-off'}
+                            onRightIconPress={() => setShowPassword(prev => !prev)}
+                            iconName="lock"
+                        />
+                        <InputField
+                            placeholder="Confirm Password"
+                            value={confirmPassword}
+                            onChangeText={(text) => { setConfirmPassword(text); setError(''); }}
+                            secureTextEntry={!showConfirmPassword}
+                            rightIcon={showConfirmPassword ? 'visibility' : 'visibility-off'}
+                            onRightIconPress={() => setShowConfirmPassword(prev => !prev)}
+                            iconName="lock-outline"
+                        />
+
+                        {error ? <Text style={styles.errorText}>{error}</Text> : null}
+
+                        <Animated.View style={[styles.buttonWrapper, { transform: [{ scale: buttonScale }] }]}>
+                            <TouchableOpacity
+                                style={styles.continueButton}
+                                onPress={handleContinue}
+                                activeOpacity={0.85}
+                            >
+                                <Text style={styles.continueButtonText}>CONTINUE</Text>
+                            </TouchableOpacity>
+                        </Animated.View>
+                    </Animated.View>
+
                     <Image
                         source={require('../assets/images/logo.jpg')}
                         style={styles.logo}
                         resizeMode="contain"
                     />
-
-                    <SuccessModal isVisible={modalVisible} onClose={() => setModalVisible(false)} />
                 </ScrollView>
             </KeyboardAvoidingView>
+
+            <SuccessModal isVisible={modalVisible} onClose={() => setModalVisible(false)} />
         </GradientBackground>
     );
 };
 
-
 export default ResetPasswordScreen;
 
 const styles = StyleSheet.create({
-    logo:{
-        height:260,
-        width:280,
-        opacity:0.4
-    },
     container: {
-
-        marginTop: 10,
+        flex: 1,
     },
-    content: {
-
+    scrollContent: {
+        flexGrow: 1,
         alignItems: 'center',
         paddingHorizontal: 24,
+        paddingTop: 60,
+        paddingBottom: 30,
     },
-    v1: {
-        width: 220,
-        height: 220,
+
+    // Header
+    headerSection: {
+        alignItems: 'center',
+        width: '100%',
+        marginBottom: 30,
     },
-    v1Cont: {
+    imageContainer: {
         justifyContent: 'center',
         alignItems: 'center',
-        marginTop: 60,
+        marginBottom: 10,
+    },
+    illustration: {
+        width: 220,
+        height: 220,
     },
     title: {
         fontFamily: 'Oswald-Bold',
         fontSize: 28,
         color: '#FFFFFF',
-        marginBottom: 20,
-        marginTop: 7,
         textTransform: 'uppercase',
+        letterSpacing: 2,
+        marginBottom: 8,
     },
-    loginButton: {
+    subtitle: {
+        fontFamily: 'Oswald-Regular',
+        fontSize: 14,
+        color: 'rgba(255,255,255,0.6)',
+        textAlign: 'center',
+        letterSpacing: 0.5,
+    },
+
+    // Form
+    formSection: {
         width: '100%',
-        height: 50,
+        alignItems: 'center',
+    },
+    errorText: {
+        color: '#ff6b6b',
+        fontFamily: 'Oswald-Regular',
+        fontSize: 13,
+        alignSelf: 'flex-start',
+        marginTop: 4,
+        marginBottom: 8,
+        letterSpacing: 0.3,
+    },
+    buttonWrapper: {
+        width: '100%',
+        marginTop: 16,
+    },
+    continueButton: {
+        width: '100%',
+        height: 52,
         backgroundColor: '#047ec9',
-        borderRadius: 10,
+        borderRadius: 12,
         justifyContent: 'center',
         alignItems: 'center',
-        marginTop: 20,
+        shadowColor: '#047ec9',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.5,
+        shadowRadius: 14,
+        elevation: 8,
     },
-    loginButtonText: {
+    continueButtonText: {
         color: '#FFFFFF',
         fontSize: 18,
         fontFamily: 'Oswald-Bold',
-        textTransform: 'uppercase',
+        letterSpacing: 2,
     },
 
+    logo: {
+        marginTop: 40,
+        height: 120,
+        width: 220,
+        opacity: 0.4,
+    },
 });

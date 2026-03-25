@@ -1,23 +1,66 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Modal, Dimensions, Image } from 'react-native';
-import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import React, { useEffect, useRef } from 'react';
+import {
+    View,
+    Text,
+    TouchableOpacity,
+    StyleSheet,
+    Modal,
+    Animated,
+    Easing,
+    Image,
+} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-
-const { height } = Dimensions.get('window');
 
 const SuccessModal = ({ isVisible, onClose }) => {
     const navigation = useNavigation();
+    const scaleAnim = useRef(new Animated.Value(0.7)).current;
+    const opacityAnim = useRef(new Animated.Value(0)).current;
+
+    useEffect(() => {
+        if (isVisible) {
+            Animated.parallel([
+                Animated.spring(scaleAnim, {
+                    toValue: 1,
+                    tension: 65,
+                    friction: 7,
+                    useNativeDriver: true,
+                }),
+                Animated.timing(opacityAnim, {
+                    toValue: 1,
+                    duration: 250,
+                    easing: Easing.out(Easing.cubic),
+                    useNativeDriver: true,
+                }),
+            ]).start();
+        } else {
+            scaleAnim.setValue(0.7);
+            opacityAnim.setValue(0);
+        }
+    }, [isVisible]);
+
+    const handleDone = () => {
+        onClose();
+        navigation.navigate('LoginScreen');
+    };
+
     return (
         <Modal
             animationType="fade"
-            transparent={true}
+            transparent
             visible={isVisible}
             onRequestClose={onClose}
-            statusBarTranslucent={true} // ensures full-screen on Android
+            statusBarTranslucent
         >
-            <View style={[styles.overlay, { height }]}>
-                <View style={styles.modalBox}>
-                    {/* Close Button */}
+            <View style={styles.overlay}>
+                <Animated.View
+                    style={[
+                        styles.modalBox,
+                        {
+                            opacity: opacityAnim,
+                            transform: [{ scale: scaleAnim }],
+                        },
+                    ]}
+                >
                     <TouchableOpacity style={styles.closeButton} onPress={onClose}>
                         <Image
                             source={require('../assets/images/Cross.png')}
@@ -25,7 +68,6 @@ const SuccessModal = ({ isVisible, onClose }) => {
                         />
                     </TouchableOpacity>
 
-                    {/* Checkmark Icon */}
                     <View style={styles.iconContainer}>
                         <Image
                             source={require('../assets/images/tick.png')}
@@ -33,79 +75,83 @@ const SuccessModal = ({ isVisible, onClose }) => {
                         />
                     </View>
 
-                    {/* Title */}
-                    <Text style={styles.title}>
-                        Your Password Has Been Changed Successfully
+                    <Text style={styles.title}>Password Changed!</Text>
+                    <Text style={styles.subtitle}>
+                        Your password has been updated successfully.
                     </Text>
 
-                    {/* Done Button */}
-                    <TouchableOpacity style={styles.doneButton} onPress={onClose}>
-                        <Text style={styles.doneButtonText}>Done</Text>
+                    <TouchableOpacity style={styles.doneButton} onPress={handleDone}>
+                        <Text style={styles.doneButtonText}>DONE</Text>
                     </TouchableOpacity>
-                </View>
+                </Animated.View>
             </View>
         </Modal>
     );
 };
 
+export default SuccessModal;
+
 const styles = StyleSheet.create({
     overlay: {
-        width: '100%',
-        backgroundColor: 'rgba(0,0,0,0.7)',
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.65)',
         justifyContent: 'center',
         alignItems: 'center',
-        position: 'absolute',
-        top: 0,
-        left: 0,
     },
     modalBox: {
-        width: '80%',
+        width: '82%',
         backgroundColor: '#fff',
-        borderRadius: 15,
-        paddingVertical: 30,
-        paddingHorizontal: 25,
+        borderRadius: 20,
+        paddingVertical: 36,
+        paddingHorizontal: 28,
         alignItems: 'center',
-        elevation: 10,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.25,
-        shadowRadius: 4,
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.2,
+        shadowRadius: 16,
+        elevation: 12,
     },
     closeButton: {
         position: 'absolute',
-        top: 10,
-        right: 15,
+        top: 12,
+        right: 16,
         zIndex: 10,
-    },
-    closeText: {
-        fontSize: 28,
-        color: '#333',
-        fontWeight: '300',
+        padding: 4,
     },
     iconContainer: {
-        marginBottom: 20,
+        marginBottom: 16,
     },
     title: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: '#333',
+        fontSize: 20,
+        fontWeight: '700',
+        color: '#1a1a2e',
         textAlign: 'center',
-        marginBottom: 25,
-        lineHeight: 25,
+        marginBottom: 8,
+        letterSpacing: 0.5,
+    },
+    subtitle: {
+        fontSize: 14,
+        color: '#666',
+        textAlign: 'center',
+        marginBottom: 28,
+        lineHeight: 20,
     },
     doneButton: {
         backgroundColor: '#047ec9',
-        paddingVertical: 12,
-        paddingHorizontal: 40,
-        borderRadius: 8,
+        paddingVertical: 13,
+        paddingHorizontal: 48,
+        borderRadius: 12,
         alignItems: 'center',
-        width: '60%',
+        shadowColor: '#047ec9',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.4,
+        shadowRadius: 10,
+        elevation: 6,
     },
     doneButtonText: {
         color: '#fff',
-        fontSize: 16,
-        fontWeight: 'bold',
+        fontSize: 15,
+        fontWeight: '700',
+        letterSpacing: 1.5,
     },
 });
-
-export default SuccessModal;
