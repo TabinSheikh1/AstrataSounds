@@ -11,6 +11,9 @@ const App = () => {
   useEffect(() => {
     setupPlayer();
   }, []);
+  useEffect(() => {
+    setupPlayer();
+  }, []);
   return (
 
     <Provider store={store}>
