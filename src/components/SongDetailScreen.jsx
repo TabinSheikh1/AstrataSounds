@@ -10,12 +10,17 @@ import {
     StatusBar,
     Platform,
     ScrollView,
+    Alert,
+    Linking,
+    Share,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import TrackPlayer, { useProgress, State, usePlaybackState } from 'react-native-track-player';
+import { useSubscription } from '../hooks/useSubscription';
+import UpgradePromptModal from './UpgradePromptModal';
 
 const { width, height } = Dimensions.get('window');
 const ALBUM_SIZE = width - 64;
@@ -47,11 +52,15 @@ const SongDetailScreen = () => {
     const isPlaying = playbackState?.state === State.Playing;
     const progress = useProgress(500);
 
+    const { canDownload, downloadsUsed, downloadLimit, plan, isBlocked, refreshAll } = useSubscription();
+
     const [isLiked, setIsLiked] = useState(false);
     const [isRepeat, setIsRepeat] = useState(false);
     const [isShuffle, setIsShuffle] = useState(false);
     const [speedIdx, setSpeedIdx] = useState(2);
     const [playerReady, setPlayerReady] = useState(false);
+    const [isDownloading, setIsDownloading] = useState(false);
+    const [upgradeModalVisible, setUpgradeModalVisible] = useState(false);
 
     // Animations
     const playScale  = useRef(new Animated.Value(1)).current;
@@ -138,6 +147,60 @@ const SongDetailScreen = () => {
             Animated.spring(likeScale, { toValue: 1, tension: 80, friction: 5, useNativeDriver: true }),
         ]).start();
         setIsLiked((prev) => !prev);
+    };
+
+    const handleDownload = async () => {
+        if (!hasAudio) {
+            Alert.alert('No Audio', 'This song has no audio generated yet.');
+            return;
+        }
+        if (isBlocked) {
+            setUpgradeModalVisible(true);
+            return;
+        }
+        if (!canDownload) {
+            const limitLabel = downloadLimit === -1 ? 'unlimited' : String(downloadLimit);
+            Alert.alert(
+                'Download Limit Reached',
+                `Monthly download limit reached (${downloadsUsed}/${limitLabel} downloads). Upgrade your plan for more downloads.`,
+                [
+                    { text: 'See Plans', onPress: () => navigation.navigate('PricingScreen') },
+                    { text: 'OK', style: 'cancel' },
+                ],
+            );
+            return;
+        }
+        setIsDownloading(true);
+        try {
+            const canOpen = await Linking.canOpenURL(audioUrl);
+            if (canOpen) {
+                await Linking.openURL(audioUrl);
+                // Refresh token/download counts after download
+                await refreshAll();
+            } else {
+                Alert.alert('Error', 'Cannot open audio file URL.');
+            }
+        } catch (e) {
+            const apiMsg = e?.response?.data?.message;
+            if (e?.response?.status === 403 && apiMsg) {
+                Alert.alert('Download Blocked', apiMsg);
+            } else {
+                Alert.alert('Download Failed', 'Could not download the file. Please try again.');
+            }
+        } finally {
+            setIsDownloading(false);
+        }
+    };
+
+    const handleShare = async () => {
+        try {
+            await Share.share({
+                title: song.title ?? 'Check out this song',
+                message: hasAudio
+                    ? `Listen to "${song.title ?? 'this song'}" — ${audioUrl}`
+                    : `Check out "${song.title ?? 'this song'}" on Astrata Music`,
+            });
+        } catch (_) {}
     };
 
     const duration = progress.duration || 0;
@@ -303,16 +366,47 @@ const SongDetailScreen = () => {
                     >
                         <Text style={styles.speedText}>{SPEEDS[speedIdx]}</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.secondaryBtn}>
-                        <MaterialIcons name="file-download" size={20} color="rgba(255,255,255,0.65)" />
+
+                    {/* Download button — gated by subscription */}
+                    <TouchableOpacity
+                        style={[
+                            styles.secondaryBtn,
+                            !canDownload && styles.secondaryBtnDisabled,
+                        ]}
+                        onPress={handleDownload}
+                        disabled={isDownloading}
+                    >
+                        <MaterialIcons
+                            name={isDownloading ? 'hourglass-empty' : 'file-download'}
+                            size={20}
+                            color={canDownload ? '#66cc33' : 'rgba(255,255,255,0.25)'}
+                        />
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.secondaryBtn}>
+
+                    {/* Share button */}
+                    <TouchableOpacity style={styles.secondaryBtn} onPress={handleShare}>
                         <MaterialIcons name="share" size={20} color="rgba(255,255,255,0.65)" />
                     </TouchableOpacity>
+
                     <TouchableOpacity style={styles.secondaryBtn}>
                         <MaterialIcons name="playlist-add" size={22} color="rgba(255,255,255,0.65)" />
                     </TouchableOpacity>
                 </View>
+
+                {/* Download limit note */}
+                {!canDownload && hasAudio && (
+                    <TouchableOpacity
+                        style={styles.downloadLimitNote}
+                        onPress={() => navigation.navigate('PricingScreen')}
+                        activeOpacity={0.75}
+                    >
+                        <MaterialIcons name="info-outline" size={13} color="#FBBF24" />
+                        <Text style={styles.downloadLimitText}>
+                            Monthly download limit reached · Upgrade for more
+                        </Text>
+                        <MaterialIcons name="chevron-right" size={13} color="#FBBF24" />
+                    </TouchableOpacity>
+                )}
 
                 {/* Info Card */}
                 <View style={styles.infoCard}>
@@ -337,6 +431,13 @@ const SongDetailScreen = () => {
                     ))}
                 </View>
             </ScrollView>
+
+            <UpgradePromptModal
+                visible={upgradeModalVisible}
+                onClose={() => setUpgradeModalVisible(false)}
+                currentPlanName={plan?.name ?? 'Harmony'}
+                blockedFeature="Downloading songs"
+            />
         </View>
     );
 };
@@ -455,4 +556,23 @@ const styles = StyleSheet.create({
     infoDivider: { height: 1, backgroundColor: 'rgba(255,255,255,0.07)', marginVertical: 14 },
     infoLabel: { color: 'rgba(255,255,255,0.4)', fontSize: 10, fontFamily: 'Oswald-Regular', letterSpacing: 1.2, textTransform: 'uppercase' },
     infoValue: { color: '#fff', fontSize: 14, fontFamily: 'Oswald-Regular', marginTop: 2 },
+
+    secondaryBtnDisabled: { opacity: 0.45 },
+    downloadLimitNote: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        backgroundColor: 'rgba(251,191,36,0.08)',
+        borderRadius: 10,
+        padding: 10,
+        marginBottom: 16,
+        borderWidth: 1,
+        borderColor: 'rgba(251,191,36,0.2)',
+    },
+    downloadLimitText: {
+        flex: 1,
+        color: '#FBBF24',
+        fontSize: 11,
+        fontFamily: 'Oswald-Regular',
+    },
 });
