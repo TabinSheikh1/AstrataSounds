@@ -19,7 +19,11 @@ import {
     Share2, MessageSquare, Mail, HelpCircle,
     FileText, ShieldCheck, RefreshCw, Trophy,
     Mic, Facebook, Twitter, Youtube, Instagram,
+    CreditCard, Zap,
 } from 'lucide-react-native';
+import { useDispatch } from 'react-redux';
+import { logout } from '../store/slices/authSlice';
+
 
 // ─────────────────────────────────────────────
 // MenuItem — defined outside to avoid recreation
@@ -41,7 +45,10 @@ const Separator = () => <View style={styles.separator} />;
 // ─────────────────────────────────────────────
 // Main Screen
 // ─────────────────────────────────────────────
+
+
 const MenuScreen = () => {
+    const dispatch = useDispatch();
     const navigation = useNavigation();
 
     // Staggered entrance animations
@@ -73,7 +80,9 @@ const MenuScreen = () => {
         opacity: opacityAnim,
         transform: [{ translateY: slideAnim }],
     });
-
+    const handleLogout = () => {
+        dispatch(logout());
+    }
     return (
         <ImageBackground
             source={require('../assets/images/image-1.jpg')}
@@ -125,25 +134,34 @@ const MenuScreen = () => {
                     </TouchableOpacity>
                 </Animated.View>
 
-                {/* Credits card */}
+                {/* Subscription card */}
                 <Animated.View style={animStyle(card1Anim, slideAnims[2])}>
                     <View style={styles.card}>
                         <View style={styles.creditRow}>
                             <View style={styles.creditLeft}>
-                                <Image source={require('../assets/images/gem-1.png')} style={styles.gemIcon} />
+                                <LinearGradient
+                                    colors={['#66cc33', '#047ec9']}
+                                    start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                                    style={styles.subIconWrap}
+                                >
+                                    <Zap color="#fff" size={18} />
+                                </LinearGradient>
                                 <View>
-                                    <Text style={styles.creditLabel}>Credits</Text>
-                                    <Text style={styles.creditAmount}>20</Text>
+                                    <Text style={styles.creditLabel}>Subscription</Text>
+                                    <Text style={styles.creditAmount}>Manage Plan</Text>
                                 </View>
                             </View>
-                            <TouchableOpacity activeOpacity={0.85}>
+                            <TouchableOpacity
+                                activeOpacity={0.85}
+                                onPress={() => navigation.navigate('BillingScreen')}
+                            >
                                 <LinearGradient
                                     colors={['#66cc33', '#047ec9']}
                                     start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
                                     style={styles.getMoreBtn}
                                 >
-                                    <MaterialIcons name="add" size={14} color="#fff" />
-                                    <Text style={styles.getMoreText}>Get More</Text>
+                                    <CreditCard color="#fff" size={14} />
+                                    <Text style={styles.getMoreText}>Billing</Text>
                                 </LinearGradient>
                             </TouchableOpacity>
                         </View>
@@ -153,6 +171,8 @@ const MenuScreen = () => {
                 {/* Group 1 — Sharing & Navigation */}
                 <Animated.View style={animStyle(card2Anim, slideAnims[3])}>
                     <View style={styles.card}>
+                        <MenuItem icon={Zap} label="Upgrade Plan" onPress={() => navigation.navigate('PricingScreen')} />
+                        <Separator />
                         <MenuItem icon={Share2} label="Share Musicful" />
                         <Separator />
                         <MenuItem icon={MessageSquare} label="Help Us Improve" />
@@ -200,7 +220,7 @@ const MenuScreen = () => {
                     </View>
 
                     {/* Action buttons */}
-                    <TouchableOpacity style={styles.logoutBtn} activeOpacity={0.85}>
+                    <TouchableOpacity style={styles.logoutBtn} activeOpacity={0.85} onPress={handleLogout}>
                         <MaterialIcons name="logout" size={18} color="#fff" style={{ marginRight: 8 }} />
                         <Text style={styles.actionBtnText}>LOG OUT</Text>
                     </TouchableOpacity>
@@ -330,6 +350,13 @@ const styles = StyleSheet.create({
         width: 28,
         height: 28,
     },
+    subIconWrap: {
+        width: 38,
+        height: 38,
+        borderRadius: 10,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
     creditLabel: {
         color: 'rgba(255,255,255,0.55)',
         fontSize: 11,
@@ -346,11 +373,11 @@ const styles = StyleSheet.create({
     getMoreBtn: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent:"center",
-        paddingHorizontal:5,
+        justifyContent: "center",
+        paddingHorizontal: 5,
         borderRadius: 20,
         gap: 2,
-     
+
     },
     getMoreText: {
         color: '#fff',
