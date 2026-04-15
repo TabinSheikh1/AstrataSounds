@@ -1,193 +1,140 @@
 import React from 'react';
-import { View, TouchableOpacity, StyleSheet, Dimensions, Image } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Platform,
+} from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import LinearGradient from 'react-native-linear-gradient';
 
-const { width } = Dimensions.get('window');
+const TABS = [
+  { route: 'HomeScreen', label: 'Home', icon: 'home' },
+  { route: 'HomeSongsScreen', label: 'Discover', icon: 'explore' },
+  { route: 'SongCreationScreen', label: 'Create', icon: 'add', isCreate: true },
+  { route: 'LibraryHomeScreen', label: 'Library', icon: 'library-music' },
+];
 
-// Fixed 3-tab layout: Library | Home (center, raised) | Create
-const TABS = {
-    LIBRARY: 'LibraryHomeScreen',
-    HOME: 'HomeSongsScreen',
-    CREATE: 'SongCreationScreen',
-};
+const ICON_SIZE = 22;
 
 const CustomBottomTabBar = ({ state, navigation }) => {
-    const currentRoute = state.routes[state.index].name;
+  const currentRoute = state.routes[state.index].name;
 
-    const navigateTo = (screen) => {
-        navigation.navigate(screen);
-    };
+  return (
+    <View style={styles.wrapper}>
+      {/* Thin accent line on top */}
+      <LinearGradient
+        colors={['#66cc33', '#047ec9', '#66cc33']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        style={styles.topAccent}
+      />
 
-    const isActive = (screen) => currentRoute === screen;
+      <View style={styles.bar}>
+        {TABS.map((tab) => {
+          const active = currentRoute === tab.route;
 
-    const renderSideIcon = (type, active) => {
-        if (type === TABS.LIBRARY) {
-            return (
-                <Image
-                    source={require('../assets/images/list.png')}
-                    style={[styles.sideIconImage, active && styles.sideIconActive]}
-                    resizeMode="contain"
+          return (
+            <TouchableOpacity
+              key={tab.route}
+              style={styles.tab}
+              onPress={() => navigation.navigate(tab.route)}
+              activeOpacity={0.7}
+            >
+              {/* Icon area */}
+
+              <View style={[styles.iconWrap, active && styles.iconWrapActive]}>
+                <MaterialIcons
+                  name={tab.icon}
+                  size={ICON_SIZE}
+                  color={active ? '#66cc33' : 'rgba(255,255,255,0.35)'}
                 />
-            );
-        }
-        if (type === TABS.CREATE) {
-            return (
-                <Image
-                    source={require('../assets/images/playlist.png')}
-                    style={[styles.sideIconImage, active && styles.sideIconActive]}
-                    resizeMode="contain"
-                />
-            );
-        }
-    };
+              </View>
 
-    return (
-        <View style={styles.mainContainer}>
-            <View style={styles.tabBarContainer}>
-                {/* Left — Library */}
-                <TouchableOpacity
-                    style={styles.tabItem}
-                    onPress={() => navigateTo(TABS.LIBRARY)}
-                    activeOpacity={0.7}
-                >
-                    <View style={[
-                        styles.sideIconCircle,
-                        isActive(TABS.LIBRARY) && styles.sideIconCircleActive,
-                    ]}>
-                        {renderSideIcon(TABS.LIBRARY, isActive(TABS.LIBRARY))}
-                    </View>
-                </TouchableOpacity>
 
-                {/* Center spacer */}
-                <View style={styles.centerSpace} />
+              {/* Label */}
+              <Text
+                style={[
+                  styles.label,
+                  active && styles.labelActive,
+                  tab.isCreate && !active && styles.labelCreate,
+                ]}
+              >
+                {tab.label}
+              </Text>
 
-                {/* Right — Create */}
-                <TouchableOpacity
-                    style={styles.tabItem}
-                    onPress={() => navigateTo(TABS.CREATE)}
-                    activeOpacity={0.7}
-                >
-                    <View style={[
-                        styles.sideIconCircle,
-                        isActive(TABS.CREATE) && styles.sideIconCircleActive,
-                    ]}>
-                        {renderSideIcon(TABS.CREATE, isActive(TABS.CREATE))}
-                    </View>
-                </TouchableOpacity>
-            </View>
-
-            {/* Floating Center — Home (always home icon) */}
-            <View style={styles.homeButtonContainer}>
-                <View style={[
-                    styles.homeButtonRing,
-                    isActive(TABS.HOME) && styles.homeButtonRingActive,
-                ]} />
-                <TouchableOpacity
-                    onPress={() => navigateTo(TABS.HOME)}
-                    activeOpacity={0.8}
-                >
-                    <LinearGradient
-                        colors={isActive(TABS.HOME) ? ['#2db35d', '#076585'] : ['#4caf50', '#0a7abf']}
-                        start={{ x: 0, y: 1 }}
-                        end={{ x: 1, y: 1 }}
-                        style={styles.homeButtonGradient}
-                    >
-                        <MaterialIcons name="home" size={34} color="#fff" />
-                    </LinearGradient>
-                </TouchableOpacity>
-            </View>
-        </View>
-    );
+              {/* Active indicator dot */}
+              {active && <View style={styles.dot} />}
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </View>
+  );
 };
 
 const styles = StyleSheet.create({
-    mainContainer: {
-        position: 'absolute',
-        bottom: 0,
-        width,
-        height: 110,
-        backgroundColor: 'transparent',
-        justifyContent: 'flex-end',
-    },
-    tabBarContainer: {
-        flexDirection: 'row',
-        height: 72,
-        backgroundColor: '#fff',
-        borderTopLeftRadius: 25,
-        borderTopRightRadius: 25,
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 36,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: -3 },
-        shadowOpacity: 0.08,
-        shadowRadius: 10,
-        elevation: 12,
-    },
-    tabItem: {
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    sideIconCircle: {
-        width: 46,
-        height: 46,
-        borderRadius: 23,
-        borderWidth: 1.5,
-        borderColor: '#d0d0d0',
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: '#fafafa',
-    },
-    sideIconCircleActive: {
-        borderColor: '#047ec9',
-        backgroundColor: '#e8f4ff',
-    },
-    sideIconImage: {
-        width: 22,
-        height: 22,
-        opacity: 0.5,
-    },
-    sideIconActive: {
-        tintColor: '#047ec9',
-        opacity: 1,
-    },
-    centerSpace: {
-        width: 72,
-    },
+  wrapper: {
+    backgroundColor: '#0a0e19',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.06)',
+    // React Navigation positions this at the bottom — no absolute needed
+  },
 
-    // Floating Home Button
-    homeButtonContainer: {
-        position: 'absolute',
-        alignSelf: 'center',
-        top: 0,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    homeButtonRing: {
-        position: 'absolute',
-        width: 76,
-        height: 76,
-        borderRadius: 38,
-        borderWidth: 10,
-        borderColor: '#3daf56',
-        opacity: 0.6,
-    },
-    homeButtonRingActive: {
-        opacity: 1,
-    },
-    homeButtonGradient: {
-        width: 58,
-        height: 58,
-        borderRadius: 29,
-        justifyContent: 'center',
-        alignItems: 'center',
-        shadowColor: '#2db35d',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.4,
-        shadowRadius: 8,
-        elevation: 8,
-    },
+  topAccent: {
+    height: 1.5,
+  },
+
+  bar: {
+    flexDirection: 'row',
+    paddingTop: 8,
+    paddingBottom: Platform.OS === 'ios' ? 24 : 8,
+    paddingHorizontal: 8,
+  },
+
+  tab: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    paddingHorizontal: 4,
+    paddingBottom: 4,
+  },
+
+  // Shared icon container — same dimensions for all tabs
+  iconWrap: {
+    width: 42,
+    height: 32,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  iconWrapActive: {
+    backgroundColor: 'rgba(102,204,51,0.14)',
+  },
+
+  label: {
+    fontSize: 10,
+    fontFamily: 'Oswald-Regular',
+    color: 'rgba(255,255,255,0.3)',
+    letterSpacing: 0.4,
+  },
+  labelActive: {
+    color: '#66cc33',
+    fontFamily: 'Oswald-Bold',
+  },
+  labelCreate: {
+    color: 'rgba(255,255,255,0.55)',
+  },
+
+  dot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#66cc33',
+    marginTop: 3,
+  },
 });
 
 export default CustomBottomTabBar;

@@ -22,8 +22,12 @@ const InputField = ({
     multiline = false,
     containerStyle,
     inputStyle,
+    textContentType,
+    maxLength,
 }) => {
     const Wrapper = onPress ? TouchableOpacity : View;
+
+    const resolvedTextContentType = textContentType ?? (secureTextEntry ? 'password' : 'none');
 
     return (
         <Wrapper
@@ -50,10 +54,11 @@ const InputField = ({
                 keyboardType={keyboardType}
                 secureTextEntry={secureTextEntry}
                 autoCapitalize={autoCapitalize}
-                textContentType={secureTextEntry ? 'password' : 'none'}
+                textContentType={resolvedTextContentType}
                 editable={editable}
-                multiline={false}  // must be false for password
+                multiline={false}
                 pointerEvents={editable ? 'auto' : 'none'}
+                maxLength={maxLength}
             />
 
             {rightIcon && (

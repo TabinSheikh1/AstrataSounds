@@ -314,7 +314,7 @@ const BillingScreen = () => {
                 </Text>
                 <Text style={styles.tokenOf}>of {tokenGranted} tokens remaining</Text>
               </View>
-              <Text style={styles.tokenCost}>70 / song</Text>
+              <Text style={styles.tokenCost}>7 / song</Text>
             </View>
             <View style={styles.barTrack}>
               <View

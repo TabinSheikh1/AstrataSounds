@@ -11,11 +11,18 @@ import {
     Animated,
     Easing,
     StatusBar,
+    Alert,
+    ActivityIndicator,
 } from 'react-native';
+import { useDispatch, useSelector } from 'react-redux';
 import GradientBackground from './GradientBackground';
 import InputField from './InputField';
+import { forgotPassword } from '../store/actions/authActions';
 
 const ForgotPasswordScreen = ({ navigation }) => {
+    const dispatch = useDispatch();
+    const { isLoading } = useSelector((state) => state.auth);
+
     const [email, setEmail] = useState('');
 
     const headerOpacity = useRef(new Animated.Value(0)).current;
@@ -57,11 +64,27 @@ const ForgotPasswordScreen = ({ navigation }) => {
         ]).start();
     }, []);
 
-    const handleContinue = () => {
+    const handleContinue = async () => {
+        if (!email.trim()) {
+            Alert.alert('Validation Error', 'Please enter your email address');
+            return;
+        }
+
         Animated.sequence([
             Animated.timing(buttonScale, { toValue: 0.95, duration: 90, useNativeDriver: true }),
             Animated.timing(buttonScale, { toValue: 1, duration: 90, useNativeDriver: true }),
-        ]).start(() => navigation.navigate('VerificationScreen'));
+        ]).start();
+
+        const result = await dispatch(forgotPassword({ email: email.trim().toLowerCase() }));
+
+        if (result.success) {
+            navigation.navigate('VerificationScreen', {
+                email: email.trim().toLowerCase(),
+                type: 'PASSWORD_RESET',
+            });
+        } else {
+            Alert.alert('Error', result.message);
+        }
     };
 
     return (
@@ -121,11 +144,16 @@ const ForgotPasswordScreen = ({ navigation }) => {
 
                         <Animated.View style={[styles.buttonWrapper, { transform: [{ scale: buttonScale }] }]}>
                             <TouchableOpacity
-                                style={styles.continueButton}
+                                style={[styles.continueButton, isLoading && styles.continueButtonDisabled]}
                                 onPress={handleContinue}
                                 activeOpacity={0.85}
+                                disabled={isLoading}
                             >
-                                <Text style={styles.continueButtonText}>CONTINUE</Text>
+                                {isLoading ? (
+                                    <ActivityIndicator color="#fff" />
+                                ) : (
+                                    <Text style={styles.continueButtonText}>CONTINUE</Text>
+                                )}
                             </TouchableOpacity>
                         </Animated.View>
 
@@ -215,6 +243,9 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.5,
         shadowRadius: 14,
         elevation: 8,
+    },
+    continueButtonDisabled: {
+        opacity: 0.7,
     },
     continueButtonText: {
         color: '#FFFFFF',

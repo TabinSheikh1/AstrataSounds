@@ -18,11 +18,10 @@ import { useDispatch, useSelector } from "react-redux";
 import GradientBackground from "./GradientBackground";
 import InputField from "./InputField";
 import { loginUser } from "../store/actions/authActions";
-import { clearAuthError } from "../store/slices/authSlice";
 
 const LoginScreen = ({ navigation }) => {
   const dispatch = useDispatch();
-  const { isLoading, error, isAuthenticated } = useSelector((state) => state.auth);
+  const { isLoading, isAuthenticated } = useSelector((state) => state.auth);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -75,13 +74,6 @@ const LoginScreen = ({ navigation }) => {
   }, [footerOpacity, formOpacity, formSlide, headerOpacity, headerSlide]);
 
   useEffect(() => {
-    if (error) {
-      Alert.alert("Login Failed", Array.isArray(error) ? error.join("\n") : error);
-      dispatch(clearAuthError());
-    }
-  }, [error, dispatch]);
-
-  useEffect(() => {
     if (isAuthenticated) {
       navigation.reset({
         index: 0,
@@ -120,12 +112,16 @@ const LoginScreen = ({ navigation }) => {
       }),
     ]).start();
 
-    await dispatch(
+    const result = await dispatch(
       loginUser({
         email: email.trim().toLowerCase(),
         password,
       })
     );
+
+    if (!result.success) {
+      Alert.alert("Login Failed", result.message);
+    }
   };
 
   return (

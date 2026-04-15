@@ -11,13 +11,24 @@ import {
     Animated,
     Easing,
     StatusBar,
+    Alert,
+    ActivityIndicator,
 } from 'react-native';
+import { useDispatch, useSelector } from 'react-redux';
 import GradientBackground from './GradientBackground';
 import InputField from './InputField';
+import { registerUser } from '../store/actions/authActions';
 
-const GENDER_OPTIONS = ['Male', 'Female', 'Prefer not to say'];
+const GENDER_OPTIONS = [
+  { label: 'Male', value: 'male' },
+  { label: 'Female', value: 'female' },
+  { label: 'Other', value: 'other' },
+];
 
 const SignUpScreen = ({ navigation }) => {
+    const dispatch = useDispatch();
+    const { isLoading } = useSelector((state) => state.auth);
+
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
     const [email, setEmail] = useState('');
@@ -75,17 +86,61 @@ const SignUpScreen = ({ navigation }) => {
         ]).start();
     }, []);
 
-    const handleSignUpPress = () => {
+    const validateForm = () => {
+        if (!firstName.trim()) {
+            Alert.alert('Validation Error', 'First name is required');
+            return false;
+        }
+        if (!lastName.trim()) {
+            Alert.alert('Validation Error', 'Last name is required');
+            return false;
+        }
+        if (!email.trim()) {
+            Alert.alert('Validation Error', 'Email is required');
+            return false;
+        }
+        if (!password.trim()) {
+            Alert.alert('Validation Error', 'Password is required');
+            return false;
+        }
+        if (password !== confirmPassword) {
+            Alert.alert('Validation Error', 'Passwords do not match');
+            return false;
+        }
+        return true;
+    };
+
+    const handleSignUpPress = async () => {
+        if (!validateForm()) return;
+
         Animated.sequence([
             Animated.timing(buttonScale, { toValue: 0.95, duration: 90, useNativeDriver: true }),
             Animated.timing(buttonScale, { toValue: 1, duration: 90, useNativeDriver: true }),
-        ]).start(() => {
-            // TODO: handle sign up logic
-        });
+        ]).start();
+
+        const result = await dispatch(
+            registerUser({
+                firstName: firstName.trim(),
+                lastName: lastName.trim(),
+                email: email.trim().toLowerCase(),
+                password,
+                ...(age ? { age: parseInt(age, 10) } : {}),
+                ...(gender ? { gender } : {}),
+            })
+        );
+
+        if (result.success) {
+            navigation.navigate('VerificationScreen', {
+                email: email.trim().toLowerCase(),
+                type: 'EMAIL_VERIFICATION',
+            });
+        } else {
+            Alert.alert('Sign Up Failed', result.message);
+        }
     };
 
     const handleGenderSelect = (option) => {
-        setGender(option);
+        setGender(option.value);
         setGenderModal(false);
     };
 
@@ -154,8 +209,8 @@ const SignUpScreen = ({ navigation }) => {
                             keyboardType="number-pad"
                         />
                         <InputField
-                            placeholder={gender || 'Gender'}
-                            value={gender}
+                            placeholder={gender ? GENDER_OPTIONS.find(o => o.value === gender)?.label : 'Gender'}
+                            value={gender ? GENDER_OPTIONS.find(o => o.value === gender)?.label : ''}
                             iconName="wc"
                             editable={false}
                             rightIcon="keyboard-arrow-down"
@@ -182,11 +237,16 @@ const SignUpScreen = ({ navigation }) => {
 
                         <Animated.View style={[styles.buttonWrapper, { transform: [{ scale: buttonScale }] }]}>
                             <TouchableOpacity
-                                style={styles.signUpButton}
+                                style={[styles.signUpButton, isLoading && styles.signUpButtonDisabled]}
                                 onPress={handleSignUpPress}
                                 activeOpacity={0.85}
+                                disabled={isLoading}
                             >
-                                <Text style={styles.signUpButtonText}>SIGN UP</Text>
+                                {isLoading ? (
+                                    <ActivityIndicator color="#fff" />
+                                ) : (
+                                    <Text style={styles.signUpButtonText}>SIGN UP</Text>
+                                )}
                             </TouchableOpacity>
                         </Animated.View>
                     </Animated.View>
@@ -248,11 +308,11 @@ const SignUpScreen = ({ navigation }) => {
                         <Text style={styles.modalTitle}>Select Gender</Text>
                         {GENDER_OPTIONS.map(option => (
                             <TouchableOpacity
-                                key={option}
+                                key={option.value}
                                 style={styles.modalOption}
                                 onPress={() => handleGenderSelect(option)}
                             >
-                                <Text style={styles.modalOptionText}>{option}</Text>
+                                <Text style={styles.modalOptionText}>{option.label}</Text>
                             </TouchableOpacity>
                         ))}
                         <TouchableOpacity
@@ -323,6 +383,9 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.5,
         shadowRadius: 14,
         elevation: 8,
+    },
+    signUpButtonDisabled: {
+        opacity: 0.7,
     },
     signUpButtonText: {
         color: '#FFFFFF',

@@ -11,11 +11,21 @@ import {
     Animated,
     Easing,
     StatusBar,
+    Alert,
+    ActivityIndicator,
 } from 'react-native';
+import { useDispatch, useSelector } from 'react-redux';
 import GradientBackground from './GradientBackground';
 import InputField from './InputField';
+import { verifyEmailOtp, resendOtp } from '../store/actions/authActions';
 
-const VerificationScreen = ({ navigation }) => {
+const VerificationScreen = ({ navigation, route }) => {
+    const dispatch = useDispatch();
+    const { isLoading } = useSelector((state) => state.auth);
+
+    const { email, type } = route.params ?? {};
+    const isEmailVerification = type === 'EMAIL_VERIFICATION';
+
     const [otp, setOtp] = useState('');
 
     const headerOpacity = useRef(new Animated.Value(0)).current;
@@ -57,11 +67,33 @@ const VerificationScreen = ({ navigation }) => {
         ]).start();
     }, []);
 
-    const handleContinue = () => {
+    const handleContinue = async () => {
+        if (!otp.trim()) {
+            Alert.alert('Validation Error', 'Please enter the verification code');
+            return;
+        }
+
         Animated.sequence([
             Animated.timing(buttonScale, { toValue: 0.95, duration: 90, useNativeDriver: true }),
             Animated.timing(buttonScale, { toValue: 1, duration: 90, useNativeDriver: true }),
-        ]).start(() => navigation.navigate('ResetPasswordScreen'));
+        ]).start();
+
+        if (isEmailVerification) {
+            const result = await dispatch(verifyEmailOtp({ email, otp: otp.trim() }));
+            if (!result.success) {
+                Alert.alert('Verification Failed', result.message);
+            }
+        } else {
+            // For password reset, pass otp to ResetPasswordScreen where it's used with the new password
+            navigation.navigate('ResetPasswordScreen', { email, otp: otp.trim() });
+        }
+    };
+
+    const handleResend = async () => {
+        const result = await dispatch(resendOtp({ email, type }));
+        if (result.success) {
+            Alert.alert('Code Sent', `A new code has been sent to ${email}`);
+        }
     };
 
     return (
@@ -97,7 +129,7 @@ const VerificationScreen = ({ navigation }) => {
                         </View>
                         <Text style={styles.title}>Verification</Text>
                         <Text style={styles.subtitle}>
-                            Enter the code we sent to your email
+                            Enter the code we sent to{'\n'}{email}
                         </Text>
                     </Animated.View>
 
@@ -117,21 +149,29 @@ const VerificationScreen = ({ navigation }) => {
                             onChangeText={setOtp}
                             iconName="dialpad"
                             keyboardType="number-pad"
+                            textContentType="oneTimeCode"
+                            maxLength={6}
                         />
 
                         <Animated.View style={[styles.buttonWrapper, { transform: [{ scale: buttonScale }] }]}>
                             <TouchableOpacity
-                                style={styles.continueButton}
+                                style={[styles.continueButton, isLoading && styles.continueButtonDisabled]}
                                 onPress={handleContinue}
                                 activeOpacity={0.85}
+                                disabled={isLoading}
                             >
-                                <Text style={styles.continueButtonText}>CONTINUE</Text>
+                                {isLoading ? (
+                                    <ActivityIndicator color="#fff" />
+                                ) : (
+                                    <Text style={styles.continueButtonText}>CONTINUE</Text>
+                                )}
                             </TouchableOpacity>
                         </Animated.View>
 
                         <TouchableOpacity
                             style={styles.resendLink}
-                            onPress={() => {/* TODO: resend OTP */}}
+                            onPress={handleResend}
+                            disabled={isLoading}
                         >
                             <Text style={styles.resendLinkText}>Didn't receive a code? Resend</Text>
                         </TouchableOpacity>
@@ -215,6 +255,9 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.5,
         shadowRadius: 14,
         elevation: 8,
+    },
+    continueButtonDisabled: {
+        opacity: 0.7,
     },
     continueButtonText: {
         color: '#FFFFFF',

@@ -11,12 +11,21 @@ import {
     Animated,
     Easing,
     StatusBar,
+    Alert,
+    ActivityIndicator,
 } from 'react-native';
+import { useDispatch, useSelector } from 'react-redux';
 import GradientBackground from './GradientBackground';
 import InputField from './InputField';
 import SuccessModal from './SuccessModal';
+import { resetPassword } from '../store/actions/authActions';
 
-const ResetPasswordScreen = () => {
+const ResetPasswordScreen = ({ route }) => {
+    const dispatch = useDispatch();
+    const { isLoading } = useSelector((state) => state.auth);
+
+    const { email, otp } = route.params ?? {};
+
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
@@ -63,7 +72,7 @@ const ResetPasswordScreen = () => {
         ]).start();
     }, []);
 
-    const handleContinue = () => {
+    const handleContinue = async () => {
         if (!password || !confirmPassword) {
             setError('Please fill all fields');
             return;
@@ -73,10 +82,19 @@ const ResetPasswordScreen = () => {
             return;
         }
         setError('');
+
         Animated.sequence([
             Animated.timing(buttonScale, { toValue: 0.95, duration: 90, useNativeDriver: true }),
             Animated.timing(buttonScale, { toValue: 1, duration: 90, useNativeDriver: true }),
-        ]).start(() => setModalVisible(true));
+        ]).start();
+
+        const result = await dispatch(resetPassword({ email, otp, newPassword: password }));
+
+        if (result.success) {
+            setModalVisible(true);
+        } else {
+            Alert.alert('Reset Failed', result.message);
+        }
     };
 
     return (
@@ -147,11 +165,16 @@ const ResetPasswordScreen = () => {
 
                         <Animated.View style={[styles.buttonWrapper, { transform: [{ scale: buttonScale }] }]}>
                             <TouchableOpacity
-                                style={styles.continueButton}
+                                style={[styles.continueButton, isLoading && styles.continueButtonDisabled]}
                                 onPress={handleContinue}
                                 activeOpacity={0.85}
+                                disabled={isLoading}
                             >
-                                <Text style={styles.continueButtonText}>CONTINUE</Text>
+                                {isLoading ? (
+                                    <ActivityIndicator color="#fff" />
+                                ) : (
+                                    <Text style={styles.continueButtonText}>CONTINUE</Text>
+                                )}
                             </TouchableOpacity>
                         </Animated.View>
                     </Animated.View>
@@ -244,6 +267,9 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.5,
         shadowRadius: 14,
         elevation: 8,
+    },
+    continueButtonDisabled: {
+        opacity: 0.7,
     },
     continueButtonText: {
         color: '#FFFFFF',

@@ -44,6 +44,7 @@ const authSlice = createSlice({
 
     clearAuthError: (state) => {
       state.error = null;
+      state.isLoading = false;
     },
 
     logout: (state) => {

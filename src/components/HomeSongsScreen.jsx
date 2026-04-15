@@ -13,8 +13,9 @@ import {
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Header from './Header';
-import { getAllSongs } from '../api/songsService';
+import { getAllSongs, toggleLikeSong } from '../api/songsService';
 import { getMyPlaylists } from '../api/playlistsService';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
 const { width } = Dimensions.get('window');
 const FILE_BASE = 'http://localhost:3000';
@@ -45,6 +46,9 @@ const HomeSongsScreen = () => {
     const [playlists, setPlaylists] = useState([]);
     const [playlistsLoading, setPlaylistsLoading] = useState(false);
 
+    // Like state: { [songId]: { liked: bool, count: number } }
+    const [likeState, setLikeState] = useState({});
+
     const handleMainTabPress = (tab, index) => {
         setSelectedTab(tab);
         Animated.spring(tabIndicator, {
@@ -59,11 +63,33 @@ const HomeSongsScreen = () => {
         setSongsLoading(true);
         try {
             const data = await getAllSongs();
-            setSongs(Array.isArray(data) ? data : data?.data ?? []);
+            const list = Array.isArray(data) ? data : data?.data ?? [];
+            setSongs(list);
+            // Seed like state from API response
+            const seed = {};
+            list.forEach((s) => {
+                seed[s.id] = { liked: s.isLiked ?? false, count: s.likesCount ?? 0 };
+            });
+            setLikeState(seed);
         } catch (e) {
             console.error('[HomeSongs] load songs error:', e?.message);
         } finally {
             setSongsLoading(false);
+        }
+    };
+
+    const handleLike = async (song) => {
+        const prev = likeState[song.id] ?? { liked: song.isLiked ?? false, count: song.likesCount ?? 0 };
+        // Optimistic update
+        setLikeState((s) => ({
+            ...s,
+            [song.id]: { liked: !prev.liked, count: prev.liked ? Math.max(0, prev.count - 1) : prev.count + 1 },
+        }));
+        try {
+            await toggleLikeSong(song.id);
+        } catch {
+            // Revert on failure
+            setLikeState((s) => ({ ...s, [song.id]: prev }));
         }
     };
 
@@ -94,6 +120,7 @@ const HomeSongsScreen = () => {
     // ── Render: Song Card ──────────────────────────────────────
     const renderSong = ({ item }) => {
         const imageUri = item.imagePath ? { uri: `${FILE_BASE}${item.imagePath}` } : require('../assets/images/Rectangle-9560.png');
+        const like = likeState[item.id] ?? { liked: item.isLiked ?? false, count: item.likesCount ?? 0 };
         return (
             <View style={styles.songCard}>
                 <TouchableOpacity onPress={() => navigation.navigate('SongDetailScreen', { song: item })}>
@@ -101,13 +128,18 @@ const HomeSongsScreen = () => {
                 </TouchableOpacity>
                 <View style={{ flex: 1, marginLeft: 10 }}>
                     <Text style={styles.songTitle} numberOfLines={1}>{item.title}</Text>
-                    {/* <Text style={styles.songArtist}>{item.category ?? 'StrataSound AI'}</Text> */}
                     <Text style={styles.songDesc} numberOfLines={2}>{item.description ?? ''}</Text>
                     <View style={styles.songActions}>
-                        <View style={styles.actionItem}>
-                            <Image source={require('../assets/images/like.png')} style={{ marginTop: 1 }} />
-                            <Text style={styles.actionText}>{formatCount(item.likesCount)}</Text>
-                        </View>
+                        <TouchableOpacity style={styles.actionItem} onPress={() => handleLike(item)} activeOpacity={0.7}>
+                            <MaterialIcons
+                                name={like.liked ? 'favorite' : 'favorite-border'}
+                                size={16}
+                                color={like.liked ? '#ff4d6d' : 'rgba(255,255,255,0.7)'}
+                            />
+                            <Text style={[styles.actionText, like.liked && styles.actionTextLiked]}>
+                                {formatCount(like.count)}
+                            </Text>
+                        </TouchableOpacity>
                         <View style={styles.actionItem}>
                             <Image source={require('../assets/images/headphone.png')} style={{ marginTop: 1 }} />
                             <Text style={styles.actionText}>{formatCount(item.listensCount)}</Text>
@@ -333,6 +365,7 @@ const styles = StyleSheet.create({
     songActions: { flexDirection: 'row', marginTop: 6, alignItems: 'center' },
     actionItem: { flexDirection: 'row', alignItems: 'center', marginRight: 12 },
     actionText: { color: '#fff', marginLeft: 4, fontFamily: 'Oswald-Bold' },
+    actionTextLiked: { color: '#ff4d6d' },
 
     // Playlist grid
     playlistGrid: { paddingHorizontal: 10, paddingBottom: 100 },

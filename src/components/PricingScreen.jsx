@@ -16,6 +16,10 @@ import { useSelector } from 'react-redux';
 import { useSubscription } from '../hooks/useSubscription';
 import CheckoutConfirmModal from './CheckoutConfirmModal';
 
+const TOKENS_PER_SONG = 70;
+
+const approxSongs = (tokens) => Math.floor(tokens / TOKENS_PER_SONG);
+
 const PLAN_META = {
   Harmony: {
     tagline: 'Start creating for free',
@@ -23,7 +27,7 @@ const PLAN_META = {
     color: 'rgba(255,255,255,0.15)',
     highlight: false,
     perks: [
-      '500 tokens/month (~7 AI songs)',
+      `500 tokens/month (~${approxSongs(500)} AI songs)`,
       '5 song downloads/month',
       '5 saved Vibe presets',
       '10 playlists max',
@@ -37,7 +41,7 @@ const PLAN_META = {
     color: 'rgba(4,126,201,0.25)',
     highlight: false,
     perks: [
-      '2,500 tokens/month (~35 AI songs)',
+      `2,500 tokens/month (~${approxSongs(2500)} AI songs)`,
       '30 song downloads/month',
       '25 saved Vibe presets',
       'Unlimited playlists',
@@ -51,7 +55,7 @@ const PLAN_META = {
     color: 'rgba(102,204,51,0.2)',
     highlight: true,
     perks: [
-      '7,000 tokens/month (~100 AI songs)',
+      `7,000 tokens/month (~${approxSongs(7000)} AI songs)`,
       'Unlimited downloads',
       'Unlimited Vibe presets',
       'Unlimited playlists',

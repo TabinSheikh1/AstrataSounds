@@ -21,6 +21,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import TrackPlayer, { useProgress, State, usePlaybackState } from 'react-native-track-player';
 import { useSubscription } from '../hooks/useSubscription';
 import UpgradePromptModal from './UpgradePromptModal';
+import { toggleLikeSong } from '../api/songsService';
 
 const { width, height } = Dimensions.get('window');
 const ALBUM_SIZE = width - 64;
@@ -54,7 +55,8 @@ const SongDetailScreen = () => {
 
     const { canDownload, downloadsUsed, downloadLimit, plan, isBlocked, refreshAll } = useSubscription();
 
-    const [isLiked, setIsLiked] = useState(false);
+    const [isLiked, setIsLiked] = useState(song.isLiked ?? false);
+    const [likesCount, setLikesCount] = useState(song.likesCount ?? song.likes ?? 0);
     const [isRepeat, setIsRepeat] = useState(false);
     const [isShuffle, setIsShuffle] = useState(false);
     const [speedIdx, setSpeedIdx] = useState(2);
@@ -141,12 +143,22 @@ const SongDetailScreen = () => {
         }
     };
 
-    const handleLikePress = () => {
+    const handleLikePress = async () => {
         Animated.sequence([
             Animated.timing(likeScale, { toValue: 1.45, duration: 130, useNativeDriver: true }),
             Animated.spring(likeScale, { toValue: 1, tension: 80, friction: 5, useNativeDriver: true }),
         ]).start();
-        setIsLiked((prev) => !prev);
+        // Optimistic update
+        const wasLiked = isLiked;
+        setIsLiked(!wasLiked);
+        setLikesCount((c) => wasLiked ? Math.max(0, c - 1) : c + 1);
+        try {
+            await toggleLikeSong(song.id);
+        } catch {
+            // Revert on failure
+            setIsLiked(wasLiked);
+            setLikesCount((c) => wasLiked ? c + 1 : Math.max(0, c - 1));
+        }
     };
 
     const handleDownload = async () => {
@@ -412,7 +424,7 @@ const SongDetailScreen = () => {
                 <View style={styles.infoCard}>
                     {[
                         { icon: 'event',        label: 'Created',  value: formatDate(song.createdAt) },
-                        { icon: 'thumb-up',     label: 'Likes',    value: String(song.likes ?? 0) },
+                        { icon: 'thumb-up',     label: 'Likes',    value: String(likesCount) },
                         { icon: 'headphones',   label: 'Listens',  value: String(song.listens ?? 0) },
                         { icon: 'surround-sound', label: 'Audio',  value: hasAudio ? 'Ready' : 'Not generated' },
                     ].map(({ icon, label, value }, i, arr) => (

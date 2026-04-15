@@ -59,3 +59,8 @@ export const generateSongImage = async (id, payload) => {
   });
   return response.data;
 };
+
+export const getLeaderboard = async (limit = 50) => {
+  const response = await API.get(`/leaderboard?limit=${limit}`);
+  return response.data;
+};
