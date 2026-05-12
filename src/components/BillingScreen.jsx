@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -22,6 +22,7 @@ import {
   cancelSubscription,
   reactivateSubscription,
   openBillingPortal,
+  buyTokensCheckout,
 } from '../api/subscriptionsService';
 
 const STATUS_CONFIG = {
@@ -152,17 +153,18 @@ const BillingScreen = () => {
     tokens,
     tokenBalance,
     tokenGranted,
+    purchasedBalance,
+    totalBalance,
     tokenColor,
     tokenPct,
     isLoading,
-    fetchSubscription,
-    fetchTokens,
     refreshAll,
   } = useSubscription();
 
   const [cancelModalVisible, setCancelModalVisible] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [portalLoading, setPortalLoading] = useState(false);
+  const [buyTokensLoading, setBuyTokensLoading] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -205,6 +207,26 @@ const BillingScreen = () => {
       Alert.alert('Error', e?.response?.data?.message ?? 'Could not reactivate. Please try again.');
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  const handleBuyTokens = async () => {
+    setBuyTokensLoading(true);
+    try {
+      const res = await buyTokensCheckout({
+        successUrl: 'strataSounds://billing?tokenPurchase=success',
+        cancelUrl: 'strataSounds://billing?tokenPurchase=cancel',
+      });
+      const url = res.data?.data?.url ?? res.data?.url;
+      if (url) {
+        await Linking.openURL(url);
+      } else {
+        Alert.alert('Error', 'Could not open checkout. Please try again.');
+      }
+    } catch (e) {
+      Alert.alert('Error', e?.response?.data?.message ?? 'Could not start purchase. Please try again.');
+    } finally {
+      setBuyTokensLoading(false);
     }
   };
 
@@ -329,6 +351,42 @@ const BillingScreen = () => {
                 Resets {fmtDate(tokens.periodEnd)}
               </Text>
             )}
+          </View>
+
+          {/* Purchased tokens wallet */}
+          <View style={styles.sectionCard}>
+            <Text style={styles.sectionLabel}>TOKEN WALLET</Text>
+            <View style={styles.tokenRow}>
+              <View>
+                <Text style={[styles.tokenValue, { color: '#66cc33', fontSize: 24 }]}>
+                  {purchasedBalance}
+                  <Text style={styles.tokenOf}> purchased</Text>
+                </Text>
+                <Text style={styles.tokenOf}>Total available: {totalBalance} tokens</Text>
+              </View>
+              <TouchableOpacity
+                onPress={handleBuyTokens}
+                disabled={buyTokensLoading}
+                activeOpacity={0.85}
+              >
+                <LinearGradient
+                  colors={['#66cc33', '#047ec9']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.buyTokensBtn}
+                >
+                  {buyTokensLoading ? (
+                    <ActivityIndicator color="#fff" size="small" />
+                  ) : (
+                    <>
+                      
+                      <Text style={styles.buyTokensText}>70 tokens{'\n'}$2.50</Text>
+                    </>
+                  )}
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.resetText}>Purchased tokens never expire or reset.</Text>
           </View>
 
           {/* Downloads */}
@@ -589,6 +647,26 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontFamily: 'Oswald-Regular',
     marginTop: 6,
+  },
+
+  // Buy tokens
+  buyTokensBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    // paddingHorizontal: 12,
+    // paddingVertical: 10,
+    borderRadius: 12,
+    minWidth: 90,
+    justifyContent: 'center',
+  },
+  buyTokensText: {
+    color: '#fff',
+    fontSize: 12,
+    fontFamily: 'Oswald-Bold',
+    letterSpacing: 0.3,
+    textAlign: 'center',
+    padding:12
   },
 
   // Downloads

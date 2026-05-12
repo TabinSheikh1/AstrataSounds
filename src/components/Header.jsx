@@ -4,6 +4,7 @@ import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSubscription } from '../hooks/useSubscription';
 import TokenHistoryDrawer from './TokenHistoryDrawer';
+import MenuScreen from './MenuScreen';
 
 const Header = () => {
     const navigation = useNavigation();
@@ -18,6 +19,7 @@ const Header = () => {
     } = useSubscription();
 
     const [drawerVisible, setDrawerVisible] = useState(false);
+    const [menuVisible, setMenuVisible] = useState(false);
 
     useFocusEffect(
         useCallback(() => {
@@ -65,7 +67,7 @@ const Header = () => {
                 {/* Left — menu button */}
                 <TouchableOpacity
                     style={styles.side}
-                    onPress={() => navigation.navigate('MenuScreen')}
+                    onPress={() => setMenuVisible(true)}
                     activeOpacity={0.7}
                 >
                     <MaterialIcons name="menu" size={28} color="#fff" />
@@ -112,6 +114,11 @@ const Header = () => {
             <TokenHistoryDrawer
                 visible={drawerVisible}
                 onClose={() => setDrawerVisible(false)}
+            />
+
+            <MenuScreen
+                visible={menuVisible}
+                onClose={() => setMenuVisible(false)}
             />
         </View>
     );

@@ -7,146 +7,203 @@ import {
   StatusBar,
   ActivityIndicator,
   RefreshControl,
+  TouchableOpacity,
+  ImageBackground,
   Dimensions,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useSelector } from 'react-redux';
 import Header from './Header';
-import GradientBackground from './GradientBackground';
 import { getLeaderboard } from '../api/songsService';
 
 const { width } = Dimensions.get('window');
 
 const MEDAL = {
-  1: { color: '#FFD700', bg: 'rgba(255,215,0,0.18)', border: '#FFD700', label: '🥇' },
-  2: { color: '#C0C0C0', bg: 'rgba(192,192,192,0.15)', border: '#C0C0C0', label: '🥈' },
-  3: { color: '#CD7F32', bg: 'rgba(205,127,50,0.15)', border: '#CD7F32', label: '🥉' },
+  1: { color: '#FFD700', gradStart: '#FFD700', gradEnd: '#B8860B', bg: 'rgba(255,215,0,0.14)', border: '#FFD700', label: '👑', rank: '1ST' },
+  2: { color: '#C0C0C0', gradStart: '#D8D8D8', gradEnd: '#909090', bg: 'rgba(192,192,192,0.12)', border: '#C0C0C0', label: '🥈', rank: '2ND' },
+  3: { color: '#CD7F32', gradStart: '#E8A050', gradEnd: '#9E5A1C', bg: 'rgba(205,127,50,0.12)', border: '#CD7F32', label: '🥉', rank: '3RD' },
 };
 
-const getInitials = (firstName = '', lastName = '') =>
-  `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
+const BAR_H   = { 1: 108, 2: 76, 3: 56 };
+const AVT_SZ  = { 1: 72,  2: 58, 3: 52 };
 
+const getInitials = (f = '', l = '') => `${f.charAt(0)}${l.charAt(0)}`.toUpperCase();
 const formatPoints = (pts) => {
+  if (!pts) return '0';
+  if (pts >= 1_000_000) return `${(pts / 1_000_000).toFixed(1)}M`;
   if (pts >= 1000) return `${(pts / 1000).toFixed(1)}k`;
   return String(pts);
 };
 
-// ─── Podium Card (top 3) ──────────────────────────────────────────────────────
-const PodiumCard = ({ entry, isCurrentUser }) => {
-  const medal = MEDAL[entry.rank];
-  const initials = getInitials(entry.firstName, entry.lastName);
-  const barHeights = { 1: 90, 2: 68, 3: 52 };
-  const barHeight = barHeights[entry.rank] ?? 52;
-  const avatarSize = entry.rank === 1 ? 62 : 52;
+// ── Podium card (top 3) ────────────────────────────────────────
+const PodiumCard = ({ entry, isCurrentUser, onPress }) => {
+  const m         = MEDAL[entry.rank];
+  const barH      = BAR_H[entry.rank]  ?? 56;
+  const avtSz     = AVT_SZ[entry.rank] ?? 52;
+  const isFirst   = entry.rank === 1;
+  const initials  = getInitials(entry.firstName, entry.lastName);
 
   return (
-    <View style={[styles.podiumCard, entry.rank === 1 && styles.podiumCardCenter]}>
+    <TouchableOpacity style={s.podiumItem} onPress={onPress} activeOpacity={0.8}>
+      {/* Crown / medal label above avatar */}
+      <Text style={[s.crownEmoji, isFirst && s.crownEmojiLarge]}>{m.label}</Text>
+
       {/* Avatar */}
-      <View
-        style={[
-          styles.podiumAvatar,
-          {
-            width: avatarSize,
-            height: avatarSize,
-            borderRadius: avatarSize / 2,
-            borderColor: medal.color,
-            backgroundColor: medal.bg,
-          },
-          isCurrentUser && styles.currentUserAvatarBorder,
-        ]}
-      >
-        <Text style={[styles.podiumInitials, { fontSize: entry.rank === 1 ? 20 : 16, color: medal.color }]}>
-          {initials}
-        </Text>
+      <View style={s.podiumAvatarWrap}>
+        <LinearGradient
+          colors={[m.gradStart + '44', m.gradEnd + '22']}
+          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+          style={[
+            s.podiumAvatar,
+            { width: avtSz, height: avtSz, borderRadius: avtSz / 2, borderColor: m.color },
+            isFirst && s.podiumAvatarFirst,
+            isCurrentUser && { borderColor: '#66cc33' },
+          ]}
+        >
+          <Text style={[s.podiumInitials, { fontSize: isFirst ? 24 : 18, color: m.color }]}>
+            {initials}
+          </Text>
+        </LinearGradient>
+
         {isCurrentUser && (
-          <View style={styles.youBadge}>
-            <Text style={styles.youBadgeText}>YOU</Text>
-          </View>
+          <LinearGradient
+            colors={['#66cc33', '#047ec9']}
+            start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+            style={s.youPill}
+          >
+            <Text style={s.youPillText}>YOU</Text>
+          </LinearGradient>
         )}
       </View>
 
       {/* Name */}
-      <Text style={[styles.podiumName, isCurrentUser && { color: '#66cc33' }]} numberOfLines={1}>
-        {entry.firstName} {entry.lastName}
+      <Text
+        style={[s.podiumName, { color: isCurrentUser ? '#66cc33' : '#fff' }]}
+        numberOfLines={1}
+      >
+        {entry.firstName || '—'}
       </Text>
 
       {/* Points */}
-      <View style={styles.podiumPoints}>
-        <MaterialIcons name="stars" size={12} color={medal.color} />
-        <Text style={[styles.podiumPointsText, { color: medal.color }]}>
+      <View style={s.podiumPts}>
+        <MaterialIcons name="stars" size={11} color={m.color} />
+        <Text style={[s.podiumPtsText, { color: m.color }]}>
           {formatPoints(entry.totalPoints)}
         </Text>
       </View>
 
       {/* Podium bar */}
       <LinearGradient
-        colors={[medal.color + '55', medal.color + '22']}
-        style={[styles.podiumBar, { height: barHeight, borderColor: medal.color }]}
+        colors={[m.gradStart + '66', m.gradStart + '33', m.gradStart + '0d']}
+        start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }}
+        style={[s.podiumBar, { height: barH, borderColor: m.color + '55' }]}
       >
-        <Text style={[styles.podiumRankText, { color: medal.color }]}>#{entry.rank}</Text>
+        <Text style={[s.podiumBarLabel, { color: m.color + 'cc' }]}>{m.rank}</Text>
       </LinearGradient>
-    </View>
+    </TouchableOpacity>
   );
 };
 
-// ─── Row (rank 4+) ────────────────────────────────────────────────────────────
-const LeaderRow = ({ entry, isCurrentUser }) => {
+// ── Ranked row (rank 4+) ───────────────────────────────────────
+const LeaderRow = ({ entry, isCurrentUser, onPress }) => {
   const initials = getInitials(entry.firstName, entry.lastName);
+  const stripOpacity = Math.max(0.05, 0.35 - (entry.rank - 4) * 0.012);
 
   return (
-    <View style={[styles.row, isCurrentUser && styles.rowHighlight]}>
+    <TouchableOpacity
+      style={[s.row, isCurrentUser && s.rowYou]}
+      onPress={onPress}
+      activeOpacity={0.8}
+    >
+      {/* Left accent strip */}
+      <LinearGradient
+        colors={
+          isCurrentUser
+            ? ['#66cc33', '#047ec9']
+            : [`rgba(102,204,51,${stripOpacity})`, `rgba(4,126,201,${stripOpacity * 0.6})`]
+        }
+        start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
+        style={s.rowStrip}
+      />
+
       {/* Rank */}
-      <Text style={[styles.rowRank, isCurrentUser && { color: '#66cc33' }]}>
+      <Text style={[s.rowRank, isCurrentUser && s.rowRankYou]}>
         {String(entry.rank).padStart(2, '0')}
       </Text>
 
       {/* Avatar */}
-      <View style={[styles.rowAvatar, isCurrentUser && styles.rowAvatarHighlight]}>
-        <Text style={[styles.rowInitials, isCurrentUser && { color: '#66cc33' }]}>{initials}</Text>
-      </View>
+      <LinearGradient
+        colors={
+          isCurrentUser
+            ? ['rgba(102,204,51,0.25)', 'rgba(4,126,201,0.18)']
+            : ['rgba(255,255,255,0.12)', 'rgba(255,255,255,0.06)']
+        }
+        start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+        style={[s.rowAvatar, isCurrentUser && s.rowAvatarYou]}
+      >
+        <Text style={[s.rowInitials, isCurrentUser && s.rowInitialsYou]}>{initials}</Text>
+      </LinearGradient>
 
-      {/* Name + YOU */}
-      <View style={styles.rowInfo}>
-        <View style={styles.rowNameRow}>
-          <Text style={[styles.rowName, isCurrentUser && { color: '#66cc33' }]} numberOfLines={1}>
-            {entry.firstName} {entry.lastName}
-          </Text>
-          {isCurrentUser && (
-            <View style={styles.youChip}>
-              <Text style={styles.youChipText}>YOU</Text>
-            </View>
-          )}
-        </View>
+      {/* Name + YOU chip */}
+      <View style={s.rowInfo}>
+        <Text
+          style={[s.rowName, isCurrentUser && s.rowNameYou]}
+          numberOfLines={1}
+        >
+          {entry.firstName} {entry.lastName}
+        </Text>
+        {isCurrentUser && (
+          <LinearGradient
+            colors={['#66cc33', '#047ec9']}
+            start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+            style={s.youChip}
+          >
+            <Text style={s.youChipText}>YOU</Text>
+          </LinearGradient>
+        )}
       </View>
 
       {/* Points */}
-      <View style={styles.rowPointsWrap}>
-        <MaterialIcons name="stars" size={14} color={isCurrentUser ? '#66cc33' : '#a0aec0'} />
-        <Text style={[styles.rowPoints, isCurrentUser && { color: '#66cc33' }]}>
+      <View style={s.rowPts}>
+        <MaterialIcons
+          name="stars"
+          size={14}
+          color={isCurrentUser ? '#66cc33' : 'rgba(255,255,255,0.35)'}
+        />
+        <Text style={[s.rowPtsText, isCurrentUser && s.rowPtsYou]}>
           {formatPoints(entry.totalPoints)}
         </Text>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 };
 
-// ─── Main Screen ─────────────────────────────────────────────────────────────
+// ── Main screen ────────────────────────────────────────────────
 const LeaderBoardScreen = () => {
-  const [entries, setEntries] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const navigation = useNavigation();
+  const [entries, setEntries]     = useState([]);
+  const [loading, setLoading]     = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const user = useSelector((s) => s.auth.user);
+
+  const goToProfile = (entry) =>
+    navigation.navigate('UserProfileScreen', {
+      userId: entry.userId,
+      firstName: entry.firstName,
+      lastName: entry.lastName,
+      rank: entry.rank,
+      totalPoints: entry.totalPoints,
+    });
 
   const load = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
     else setLoading(true);
     try {
       const data = await getLeaderboard(50);
-      // API may wrap in { data: [...] } or return array directly
       setEntries(Array.isArray(data) ? data : data?.data ?? []);
-    } catch (e) {
+    } catch {
       setEntries([]);
     } finally {
       setLoading(false);
@@ -154,50 +211,123 @@ const LeaderBoardScreen = () => {
     }
   }, []);
 
-  useFocusEffect(
-    useCallback(() => {
-      load();
-    }, [load])
-  );
+  useFocusEffect(useCallback(() => { load(); }, [load]));
 
   const top3 = entries.slice(0, 3);
   const rest = entries.slice(3);
+  // Classic podium: 2nd left, 1st centre, 3rd right
+  const podiumOrder = top3.length === 3 ? [top3[1], top3[0], top3[2]] : top3;
 
-  const renderRow = ({ item }) => (
-    <LeaderRow entry={item} isCurrentUser={user?.id === item.userId} />
-  );
-
-  const podiumOrder = top3.length === 3
-    ? [top3[1], top3[0], top3[2]] // 2, 1, 3 — classic podium layout
-    : top3;
-
-  return (
-    <GradientBackground>
-      <StatusBar barStyle="light-content" />
-
-      <Header title="STRATASOUND MUSIC" />
-
-      {/* Page heading */}
-      <View style={styles.heading}>
-        <Text style={styles.headingTitle}>Leaderboard</Text>
-        <Text style={styles.headingSubtitle}>Top creators by community points</Text>
+  const ListHeader = () => (
+    <>
+      {/* ── Trophy banner ── */}
+      <View style={s.banner}>
+        <LinearGradient
+          colors={['#66cc33', '#FFD700', '#047ec9']}
+          start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+          style={s.bannerTopLine}
+        />
+        <LinearGradient
+          colors={['rgba(255,215,0,0.12)', 'rgba(4,126,201,0.08)']}
+          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+          style={s.bannerGrad}
+        >
+          <View style={s.bannerIconWrap}>
+            <MaterialIcons name="emoji-events" size={38} color="#FFD700" />
+          </View>
+          <View style={s.bannerText}>
+            <Text style={s.bannerTitle}>LEADERBOARD</Text>
+            <Text style={s.bannerSub}>Top creators by community points</Text>
+          </View>
+          {/* Decorative stars */}
+          <View style={[s.starDot, { top: 10, right: 24, width: 4, height: 4 }]} />
+          <View style={[s.starDot, { top: 22, right: 14, width: 3, height: 3, opacity: 0.5 }]} />
+          <View style={[s.starDot, { bottom: 14, right: 32, width: 5, height: 5, opacity: 0.35 }]} />
+        </LinearGradient>
       </View>
 
+      {/* ── Podium ── */}
+      {top3.length > 0 && (
+        <View style={s.podiumSection}>
+          {/* Ambient glow behind #1 */}
+          <View style={s.podiumGlow} />
+
+          <View style={s.podiumRow}>
+            {podiumOrder.map((entry) => (
+              <PodiumCard
+                key={String(entry.userId)}
+                entry={entry}
+                isCurrentUser={user?.id === entry.userId}
+                onPress={() => goToProfile(entry)}
+              />
+            ))}
+          </View>
+        </View>
+      )}
+
+      {/* ── Divider ── */}
+      {rest.length > 0 && (
+        <View style={s.dividerRow}>
+          <LinearGradient
+            colors={['transparent', 'rgba(255,255,255,0.18)', 'transparent']}
+            start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+            style={s.dividerLine}
+          />
+          <View style={s.dividerChip}>
+            <MaterialIcons name="format-list-numbered" size={12} color="#66cc33" />
+            <Text style={s.dividerLabel}>RANKINGS</Text>
+          </View>
+          <LinearGradient
+            colors={['transparent', 'rgba(255,255,255,0.18)', 'transparent']}
+            start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+            style={s.dividerLine}
+          />
+        </View>
+      )}
+    </>
+  );
+
+  return (
+    <ImageBackground
+      source={require('../assets/images/image-1.jpg')}
+      style={s.background}
+      resizeMode="cover"
+    >
+      <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
+      <Header />
+
       {loading ? (
-        <View style={styles.centered}>
+        <View style={s.centered}>
+          <LinearGradient
+            colors={['rgba(255,215,0,0.15)', 'rgba(4,126,201,0.1)']}
+            style={s.loadingIconWrap}
+          >
+            <MaterialIcons name="emoji-events" size={36} color="#FFD700" />
+          </LinearGradient>
           <ActivityIndicator size="large" color="#66cc33" />
+          <Text style={s.loadingText}>Loading rankings...</Text>
         </View>
       ) : entries.length === 0 ? (
-        <View style={styles.centered}>
-          <MaterialIcons name="leaderboard" size={52} color="rgba(255,255,255,0.15)" />
-          <Text style={styles.emptyText}>No entries yet</Text>
+        <View style={s.centered}>
+          <View style={s.emptyIconWrap}>
+            <MaterialIcons name="emoji-events" size={40} color="rgba(255,215,0,0.4)" />
+          </View>
+          <Text style={s.emptyTitle}>No entries yet</Text>
+          <Text style={s.emptySub}>Be the first to create songs and earn points!</Text>
         </View>
       ) : (
         <FlatList
           data={rest}
           keyExtractor={(item) => String(item.userId)}
-          renderItem={renderRow}
-          contentContainerStyle={styles.listContent}
+          renderItem={({ item }) => (
+            <LeaderRow
+              entry={item}
+              isCurrentUser={user?.id === item.userId}
+              onPress={() => goToProfile(item)}
+            />
+          )}
+          ListHeaderComponent={<ListHeader />}
+          contentContainerStyle={s.listContent}
           showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl
@@ -206,237 +336,307 @@ const LeaderBoardScreen = () => {
               tintColor="#66cc33"
             />
           }
-          ListHeaderComponent={
-            top3.length > 0 ? (
-              <>
-                {/* ── Podium ── */}
-                <View style={styles.podiumWrap}>
-                  {podiumOrder.map((entry) => (
-                    <PodiumCard
-                      key={entry.userId}
-                      entry={entry}
-                      isCurrentUser={user?.id === entry.userId}
-                    />
-                  ))}
-                </View>
-
-                {/* Divider before ranked list */}
-                {rest.length > 0 && (
-                  <View style={styles.dividerRow}>
-                    <View style={styles.dividerLine} />
-                    <Text style={styles.dividerLabel}>Rankings</Text>
-                    <View style={styles.dividerLine} />
-                  </View>
-                )}
-              </>
-            ) : null
-          }
         />
       )}
-    </GradientBackground>
+    </ImageBackground>
   );
 };
 
 export default LeaderBoardScreen;
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-
-  heading: {
-    alignItems: 'center',
-    paddingTop: 6,
-    paddingBottom: 12,
-  },
-  headingTitle: {
-    fontSize: 26,
-    fontFamily: 'Oswald-Bold',
-    color: '#fff',
-    letterSpacing: 1.5,
-  },
-  headingSubtitle: {
-    fontSize: 11,
-    fontFamily: 'Oswald-Regular',
-    color: 'rgba(255,255,255,0.4)',
-    letterSpacing: 0.5,
-    marginTop: 2,
-  },
+// ── Styles ─────────────────────────────────────────────────────
+const s = StyleSheet.create({
+  background: { flex: 1, width: '100%', height: '100%' },
 
   centered: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 12,
+    gap: 14,
+    paddingBottom: 60,
   },
-  emptyText: {
-    color: 'rgba(255,255,255,0.3)',
+  loadingIconWrap: {
+    width: 72,
+    height: 72,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  loadingText: {
+    color: 'rgba(255,255,255,0.5)',
     fontFamily: 'Oswald-Regular',
-    fontSize: 15,
+    fontSize: 14,
+  },
+  emptyIconWrap: {
+    width: 80,
+    height: 80,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255,215,0,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,215,0,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyTitle: {
+    color: 'rgba(255,255,255,0.7)',
+    fontFamily: 'Oswald-Bold',
+    fontSize: 18,
+  },
+  emptySub: {
+    color: 'rgba(255,255,255,0.35)',
+    fontFamily: 'Oswald-Regular',
+    fontSize: 13,
+    textAlign: 'center',
+    paddingHorizontal: 40,
   },
 
-  // ── Podium ──────────────────────────────────────────
-  podiumWrap: {
+  listContent: {
+    paddingBottom: 100,
+  },
+
+  // ── Trophy banner ──────────────────────────────────────────
+  banner: {
+    marginHorizontal: 16,
+    marginTop: 12,
+    marginBottom: 20,
+    borderRadius: 20,
+    overflow: 'hidden',
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,215,0,0.2)',
+  },
+  bannerTopLine: { height: 2 },
+  bannerGrad: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    // padding: 16,
+    gap: 14,
+    position: 'relative',
+    // overflow: 'hidden',
+  },
+  bannerIconWrap: {
+    width: 60,
+    height: 60,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,215,0,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,215,0,0.25)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    flexShrink: 0,
+    margin:16
+    
+  },
+  bannerText: { flex: 1 },
+  bannerTitle: {
+    color: '#fff',
+    fontFamily: 'Oswald-Bold',
+    fontSize: 22,
+    letterSpacing: 2,
+    marginBottom: 3,
+  },
+  bannerSub: {
+    color: 'rgba(255,255,255,0.45)',
+    fontFamily: 'Oswald-Regular',
+    fontSize: 12,
+    letterSpacing: 0.3,
+  },
+  starDot: {
+    position: 'absolute',
+    borderRadius: 99,
+    backgroundColor: '#FFD700',
+  },
+
+  // ── Podium section ─────────────────────────────────────────
+  podiumSection: {
+    marginHorizontal: 12,
+    marginBottom: 8,
+    position: 'relative',
+  },
+  podiumGlow: {
+    position: 'absolute',
+    alignSelf: 'center',
+    top: 10,
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+    backgroundColor: 'rgba(255,215,0,0.06)',
+  },
+  podiumRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     justifyContent: 'center',
-    paddingHorizontal: 12,
-    paddingBottom: 4,
-    marginTop: 8,
   },
 
-  podiumCard: {
+  // ── Podium card ────────────────────────────────────────────
+  podiumItem: {
     flex: 1,
     alignItems: 'center',
     marginHorizontal: 4,
   },
-  podiumCardCenter: {
-    marginBottom: 0,
+  crownEmoji: {
+    fontSize: 20,
+    marginBottom: 4,
   },
-
+  crownEmojiLarge: {
+    fontSize: 28,
+    marginBottom: 2,
+  },
+  podiumAvatarWrap: {
+    position: 'relative',
+    marginBottom: 7,
+  },
   podiumAvatar: {
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    marginBottom: 6,
-  },
-  currentUserAvatarBorder: {
-    borderColor: '#66cc33',
-    shadowColor: '#66cc33',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.6,
-    shadowRadius: 8,
-    elevation: 6,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  podiumAvatarFirst: {
+    shadowColor: '#FFD700',
+    elevation: 12,
   },
   podiumInitials: {
     fontFamily: 'Oswald-Bold',
   },
-  youBadge: {
+  youPill: {
     position: 'absolute',
-    bottom: -6,
-    backgroundColor: '#66cc33',
-    borderRadius: 4,
-    paddingHorizontal: 4,
-    paddingVertical: 1,
+    bottom: -8,
+    alignSelf: 'center',
+    borderRadius: 5,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
   },
-  youBadgeText: {
+  youPillText: {
+    color: '#fff',
     fontSize: 7,
     fontFamily: 'Oswald-Bold',
-    color: '#0a0e19',
+    letterSpacing: 0.5,
   },
-
   podiumName: {
-    fontSize: 11,
+    fontSize: 12,
     fontFamily: 'Oswald-Bold',
-    color: '#fff',
     textAlign: 'center',
     marginBottom: 3,
-    maxWidth: 90,
     letterSpacing: 0.3,
+    maxWidth: 90,
   },
-  podiumPoints: {
+  podiumPts: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 3,
-    marginBottom: 6,
+    marginBottom: 8,
   },
-  podiumPointsText: {
-    fontSize: 11,
+  podiumPtsText: {
+    fontSize: 12,
     fontFamily: 'Oswald-Bold',
   },
   podiumBar: {
     width: '100%',
-    borderTopLeftRadius: 8,
-    borderTopRightRadius: 8,
+    borderTopLeftRadius: 10,
+    borderTopRightRadius: 10,
     borderWidth: 1,
     borderBottomWidth: 0,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  podiumRankText: {
-    fontSize: 18,
+  podiumBarLabel: {
+    fontSize: 13,
     fontFamily: 'Oswald-Bold',
-    opacity: 0.7,
+    letterSpacing: 1,
   },
 
-  // ── Divider ─────────────────────────────────────────
+  // ── Divider ────────────────────────────────────────────────
   dividerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginHorizontal: 20,
-    marginVertical: 14,
+    marginHorizontal: 16,
+    marginTop: 16,
+    marginBottom: 12,
+    gap: 10,
   },
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+  },
+  dividerChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: 'rgba(102,204,51,0.1)',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(102,204,51,0.2)',
   },
   dividerLabel: {
-    color: 'rgba(255,255,255,0.3)',
-    fontFamily: 'Oswald-Regular',
-    fontSize: 11,
-    letterSpacing: 1.2,
-    marginHorizontal: 10,
+    color: '#66cc33',
+    fontFamily: 'Oswald-Bold',
+    fontSize: 10,
+    letterSpacing: 1.5,
   },
 
-  // ── Ranked rows ─────────────────────────────────────
-  listContent: {
-    paddingHorizontal: 16,
-    paddingBottom: 24,
-  },
-
+  // ── Ranked row ─────────────────────────────────────────────
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.25)',
-    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.12)',
-    paddingVertical: 10,
-    paddingHorizontal: 14,
+    marginHorizontal: 16,
     marginBottom: 8,
+    paddingVertical: 10,
+    paddingRight: 14,
+    overflow: 'hidden',
+    gap: 10,
   },
-  rowHighlight: {
+  rowYou: {
     backgroundColor: 'rgba(102,204,51,0.08)',
     borderColor: 'rgba(102,204,51,0.3)',
   },
-
+  rowStrip: {
+    width: 4,
+    alignSelf: 'stretch',
+    borderRadius: 2,
+  },
   rowRank: {
-    width: 28,
+    width: 26,
     fontFamily: 'Oswald-Bold',
     fontSize: 14,
-    color: 'rgba(255,255,255,0.35)',
+    color: 'rgba(255,255,255,0.3)',
+    letterSpacing: 0.5,
   },
-
+  rowRankYou: { color: '#66cc33' },
   rowAvatar: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: 'rgba(0,0,0,0.2)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)',
   },
-  rowAvatarHighlight: {
-    backgroundColor: 'rgba(102,204,51,0.12)',
-    borderColor: 'rgba(102,204,51,0.4)',
+  rowAvatarYou: {
+    borderColor: 'rgba(102,204,51,0.5)',
   },
   rowInitials: {
-    fontSize: 13,
+    fontSize: 14,
     fontFamily: 'Oswald-Bold',
-    color: 'rgba(255,255,255,0.6)',
+    color: 'rgba(255,255,255,0.7)',
   },
-
+  rowInitialsYou: { color: '#66cc33' },
   rowInfo: {
     flex: 1,
-  },
-  rowNameRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 7,
+    flexWrap: 'wrap',
   },
   rowName: {
     fontFamily: 'Oswald-Bold',
@@ -444,27 +644,27 @@ const styles = StyleSheet.create({
     color: '#fff',
     flexShrink: 1,
   },
-
+  rowNameYou: { color: '#66cc33' },
   youChip: {
-    backgroundColor: '#66cc33',
-    borderRadius: 4,
-    paddingHorizontal: 5,
-    paddingVertical: 1,
+    borderRadius: 5,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
   },
   youChipText: {
     fontSize: 8,
     fontFamily: 'Oswald-Bold',
-    color: '#0a0e19',
+    color: '#fff',
+    letterSpacing: 0.5,
   },
-
-  rowPointsWrap: {
+  rowPts: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
   },
-  rowPoints: {
+  rowPtsText: {
     fontFamily: 'Oswald-Bold',
     fontSize: 14,
-    color: '#a0aec0',
+    color: 'rgba(255,255,255,0.5)',
   },
+  rowPtsYou: { color: '#66cc33' },
 });

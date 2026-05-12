@@ -26,6 +26,7 @@ const PLAN_META = {
     icon: 'music-note',
     color: 'rgba(255,255,255,0.15)',
     highlight: false,
+    priceMonthly: 0,
     perks: [
       `500 tokens/month (~${approxSongs(500)} AI songs)`,
       '5 song downloads/month',
@@ -40,6 +41,7 @@ const PLAN_META = {
     icon: 'queue-music',
     color: 'rgba(4,126,201,0.25)',
     highlight: false,
+    priceMonthly: 39,
     perks: [
       `2,500 tokens/month (~${approxSongs(2500)} AI songs)`,
       '30 song downloads/month',
@@ -54,6 +56,7 @@ const PLAN_META = {
     icon: 'workspace-premium',
     color: 'rgba(102,204,51,0.2)',
     highlight: true,
+    priceMonthly: 129,
     perks: [
       `7,000 tokens/month (~${approxSongs(7000)} AI songs)`,
       'Unlimited downloads',
@@ -79,10 +82,11 @@ const PlanCard = ({
   const isHighlight = meta.highlight;
   const isFree = plan.name === 'Harmony';
 
-  const yearlyPrice = plan.priceYearly ?? plan.priceMonthly * 12 * 0.8;
+  const monthly = meta.priceMonthly ?? plan.priceMonthly ?? 0;
+  const yearlyPrice = plan.priceYearly ?? monthly * 12 * 0.8;
   const effectiveMonthly = isYearly
     ? (yearlyPrice / 12).toFixed(2)
-    : plan.monthlyPrice?.toFixed(2);
+    : monthly.toFixed(2);
 
   return (
     <View
@@ -136,7 +140,7 @@ const PlanCard = ({
       {/* Price */}
       <View style={styles.priceSection}>
         {isFree ? (
-          <Text style={styles.priceText}>Free Forever</Text>
+         <></>
         ) : (
           <>
             {isYearly ? (
@@ -151,7 +155,7 @@ const PlanCard = ({
               </View>
             ) : (
               <Text style={styles.priceText}>
-                ${plan.priceMonthly}
+                ${effectiveMonthly}
                 <Text style={styles.perMonth}>/mo</Text>
               </Text>
             )}

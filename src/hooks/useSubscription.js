@@ -63,6 +63,8 @@ export const useSubscription = () => {
 
   const tokenBalance = tokens?.balance ?? 0;
   const tokenGranted = tokens?.granted ?? 500;
+  const purchasedBalance = tokens?.purchasedBalance ?? 0;
+  const totalBalance = tokens?.totalBalance ?? tokenBalance + purchasedBalance;
   const downloadsUsed = tokens?.downloadsUsedThisPeriod ?? 0;
 
   const downloadLimit = plan?.monthlyDownloadLimit ?? 5;
@@ -74,7 +76,7 @@ export const useSubscription = () => {
   const isBlocked = status === 'canceled' || status === 'unpaid';
 
   const canGenerate =
-    !isBlocked && tokenBalance >= TOKEN_COST_PER_SONG;
+    !isBlocked && totalBalance >= TOKEN_COST_PER_SONG;
 
   const canDownload =
     !isBlocked &&
@@ -104,6 +106,8 @@ export const useSubscription = () => {
     tokensLoading,
     tokenBalance,
     tokenGranted,
+    purchasedBalance,
+    totalBalance,
     tokenPct,
     tokenColor,
     downloadsUsed,

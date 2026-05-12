@@ -4,6 +4,8 @@ import {
     Animated, Easing, KeyboardAvoidingView, Platform,
     Dimensions, Alert,
 } from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import Header from './Header';
 import { useNavigation } from '@react-navigation/native';
 import { launchImageLibrary } from 'react-native-image-picker';
@@ -19,48 +21,103 @@ import GenerateTab from './songCreation/GenerateTab';
 
 const { width } = Dimensions.get('window');
 
+// ── Step progress indicator ────────────────────────────────────
+const STEP_META = [
+    { key: 'Lyrics',   label: 'Lyrics'  },
+    { key: 'Cover',    label: 'Cover'   },
+    { key: 'Generate', label: 'Create'  },
+];
+
+const StepIndicator = ({ currentTab, onTabPress }) => {
+    const currentIdx = TABS.indexOf(currentTab);
+    return (
+        <View style={styles.stepWrap}>
+            {/* Circles + connecting lines */}
+            <View style={styles.stepCircleRow}>
+                {STEP_META.map((step, i) => {
+                    const isActive = i === currentIdx;
+                    const isDone   = i < currentIdx;
+                    return (
+                        <React.Fragment key={step.key}>
+                            <TouchableOpacity onPress={() => onTabPress(step.key, i)} activeOpacity={0.8}>
+                                <LinearGradient
+                                    colors={isActive || isDone ? ['#66cc33', '#047ec9'] : ['rgba(255,255,255,0.12)', 'rgba(255,255,255,0.08)']}
+                                    start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                                    style={styles.stepCircle}
+                                >
+                                    {isDone
+                                        ? <MaterialIcons name="check" size={14} color="#fff" />
+                                        : <Text style={[styles.stepNum, isActive && styles.stepNumActive]}>{i + 1}</Text>
+                                    }
+                                </LinearGradient>
+                            </TouchableOpacity>
+                            {i < STEP_META.length - 1 && (
+                                <LinearGradient
+                                    colors={isDone ? ['#66cc33', '#047ec9'] : ['rgba(255,255,255,0.12)', 'rgba(255,255,255,0.12)']}
+                                    start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                                    style={styles.stepLine}
+                                />
+                            )}
+                        </React.Fragment>
+                    );
+                })}
+            </View>
+            {/* Labels row */}
+            <View style={styles.stepLabelRow}>
+                {STEP_META.map((step, i) => {
+                    const isActive = i === currentIdx;
+                    return (
+                        <React.Fragment key={step.key}>
+                            <Text style={[styles.stepLabel, isActive && styles.stepLabelActive]}>
+                                {step.label}
+                            </Text>
+                            {i < STEP_META.length - 1 && <View style={styles.stepLabelSpacer} />}
+                        </React.Fragment>
+                    );
+                })}
+            </View>
+        </View>
+    );
+};
+
 // ────────────────────────────────────────────────────────────
 const SongCreationScreen = () => {
     const navigation = useNavigation();
 
-    // Tab
     const [selectedTab, setSelectedTab] = useState('Lyrics');
 
     // Lyrics tab state
-    const [instrumental, setInstrumental] = useState(false);
-    const [styleMode, setStyleMode] = useState('prompt');   // 'prompt' | 'vibe'
-    const [styleText, setStyleText] = useState('');
+    const [instrumental, setInstrumental]       = useState(false);
+    const [styleMode, setStyleMode]             = useState('prompt');
+    const [styleText, setStyleText]             = useState('');
     const [selectedCategory, setSelectedCategory] = useState('Pop');
-    const [lyricsText, setLyricsText] = useState('');
-    const [lyricsMode, setLyricsMode] = useState('manual'); // 'manual' | 'ai'
-    const [selectedMood, setSelectedMood] = useState(null);
-    const [showMoodPicker, setShowMoodPicker] = useState(false);
-    const [gender, setGender] = useState('Male');
-    const [vibes, setVibes] = useState([]);
-    const [selectedVibeId, setSelectedVibeId] = useState(null);
-    const [vibesLoading, setVibesLoading] = useState(false);
+    const [lyricsText, setLyricsText]           = useState('');
+    const [lyricsMode, setLyricsMode]           = useState('manual');
+    const [selectedMood, setSelectedMood]       = useState(null);
+    const [showMoodPicker, setShowMoodPicker]   = useState(false);
+    const [gender, setGender]                   = useState('Male');
+    const [vibes, setVibes]                     = useState([]);
+    const [selectedVibeId, setSelectedVibeId]   = useState(null);
+    const [vibesLoading, setVibesLoading]       = useState(false);
 
     // Cover tab state
-    const [coverMode, setCoverMode] = useState('ai');       // 'ai' | 'upload'
-    const [imagePrompt, setImagePrompt] = useState('');
+    const [coverMode, setCoverMode]       = useState('ai');
+    const [imagePrompt, setImagePrompt]   = useState('');
     const [uploadedImage, setUploadedImage] = useState(null);
 
     // Generate tab state
-    const [titleText, setTitleText] = useState('');
+    const [titleText, setTitleText]     = useState('');
     const [description, setDescription] = useState('');
 
     // Generation
     const [generating, setGenerating] = useState(false);
-    const [genStep, setGenStep] = useState('');
+    const [genStep, setGenStep]       = useState('');
 
     // Animations
-    const tabIndicator = useRef(new Animated.Value(0)).current;
     const contentFade  = useRef(new Animated.Value(1)).current;
     const contentSlide = useRef(new Animated.Value(0)).current;
     const btnScale     = useRef(new Animated.Value(1)).current;
-    const TAB_W = (width - 32) / TABS.length;
 
-    // Load vibes when switching to vibe mode
     useEffect(() => {
         if (styleMode === 'vibe' && vibes.length === 0) loadVibes();
     }, [styleMode]);
@@ -74,19 +131,18 @@ const SongCreationScreen = () => {
         finally { setVibesLoading(false); }
     };
 
-    const animateTab = (index) => {
+    const animateTab = () => {
         contentFade.setValue(0);
-        contentSlide.setValue(18);
+        contentSlide.setValue(16);
         Animated.parallel([
-            Animated.timing(contentFade,  { toValue: 1, duration: 350, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
-            Animated.timing(contentSlide, { toValue: 0, duration: 350, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+            Animated.timing(contentFade,  { toValue: 1, duration: 300, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+            Animated.timing(contentSlide, { toValue: 0, duration: 300, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
         ]).start();
-        Animated.spring(tabIndicator, { toValue: index, tension: 60, friction: 8, useNativeDriver: true }).start();
     };
 
-    const handleTabPress = (tab, index) => {
+    const handleTabPress = (tab) => {
         setSelectedTab(tab);
-        animateTab(index);
+        animateTab();
     };
 
     const handleMoodSelect = (mood) => {
@@ -103,7 +159,7 @@ const SongCreationScreen = () => {
 
     const resetForm = () => {
         setSelectedTab('Lyrics');
-        animateTab(0);
+        animateTab();
         setInstrumental(false);
         setStyleMode('prompt');
         setStyleText('');
@@ -120,11 +176,10 @@ const SongCreationScreen = () => {
         setDescription('');
     };
 
-    // ── MAIN GENERATE HANDLER ─────────────────────────────────
     const handleGenerate = async () => {
         if (!titleText.trim()) {
-            Alert.alert('Title required', 'Go to the Generate tab and add a song title.');
-            handleTabPress('Generate', 2);
+            Alert.alert('Title required', 'Go to the Create tab and add a song title.');
+            handleTabPress('Generate');
             return;
         }
 
@@ -135,13 +190,11 @@ const SongCreationScreen = () => {
 
         setGenerating(true);
         try {
-            // Step 1 — create song record
             setGenStep('Creating song...');
             const raw = await createSong({ title: titleText.trim(), description: description.trim() || undefined });
             const song = raw?.data ?? raw;
             if (!song?.id) throw new Error('Song creation failed');
 
-            // Step 2 — cover image
             if (coverMode === 'upload' && uploadedImage) {
                 setGenStep('Uploading cover image...');
                 const fd = new FormData();
@@ -152,7 +205,6 @@ const SongCreationScreen = () => {
                 await generateSongImage(song.id, { prompt: imagePrompt.trim() });
             }
 
-            // Step 3 — build GenerateSongDto
             setGenStep('Preparing generation payload...');
             const isManualLyrics = lyricsMode === 'manual' && lyricsText.trim().length > 0;
             const promptValue = instrumental
@@ -167,12 +219,10 @@ const SongCreationScreen = () => {
                 ...(selectedVibeId ? { vibeId: selectedVibeId } : { prompt: promptValue || 'A beautiful well-crafted song' }),
             };
 
-            // Step 4 — generate audio (long running)
             setGenStep('Generating song with AI (this may take a few minutes)...');
             const updatedRaw = await generateSongAudio(song.id, generatePayload);
             const updatedSong = updatedRaw?.data ?? updatedRaw ?? song;
 
-            // Step 5 — navigate
             setGenerating(false);
             resetForm();
             navigation.navigate('SongDetailScreen', { song: { ...song, ...updatedSong } });
@@ -185,6 +235,8 @@ const SongCreationScreen = () => {
         }
     };
 
+    const currentIdx = TABS.indexOf(selectedTab);
+
     const renderContent = () => {
         const animStyle = { opacity: contentFade, transform: [{ translateY: contentSlide }], flex: 1 };
         if (selectedTab === 'Lyrics') return (
@@ -196,7 +248,7 @@ const SongCreationScreen = () => {
                     selectedCategory={selectedCategory} setSelectedCategory={setSelectedCategory}
                     lyricsText={lyricsText} setLyricsText={setLyricsText}
                     lyricsMode={lyricsMode} setLyricsMode={setLyricsMode}
-                    selectedMood={selectedMood} setSelectedMood={setSelectedMood}
+                    selectedMood={selectedMood}
                     setShowMoodPicker={setShowMoodPicker}
                     gender={gender} setGender={setGender}
                     vibes={vibes} selectedVibeId={selectedVibeId} setSelectedVibeId={setSelectedVibeId}
@@ -241,33 +293,52 @@ const SongCreationScreen = () => {
 
     return (
         <ImageBackground source={require('../assets/images/image-1.jpg')} style={styles.background}>
-            <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}>
+            <KeyboardAvoidingView
+                style={{ flex: 1 }}
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+            >
                 <View style={styles.container}>
-                    <Header coins={25} />
+                    <Header />
 
-                    {/* Tab bar */}
-                    <View style={styles.tabBarWrap}>
-                        <View style={styles.tabBarContainer}>
-                            <Animated.View
-                                style={[styles.tabPill, {
-                                    width: TAB_W - 4,
-                                    transform: [{
-                                        translateX: tabIndicator.interpolate({
-                                            inputRange: [0, 1, 2],
-                                            outputRange: [2, TAB_W + 2, TAB_W * 2 + 2],
-                                        }),
-                                    }],
-                                }]}
-                            />
-                            {TABS.map((tab, i) => (
-                                <TouchableOpacity key={tab} style={styles.tabBtn} onPress={() => handleTabPress(tab, i)} activeOpacity={0.8}>
-                                    <Text style={[styles.tabText, selectedTab === tab && styles.tabTextActive]}>{tab}</Text>
-                                </TouchableOpacity>
-                            ))}
-                        </View>
-                    </View>
+                    {/* Step progress indicator */}
+                    <StepIndicator currentTab={selectedTab} onTabPress={handleTabPress} />
 
+                    {/* Tab content */}
                     {renderContent()}
+
+                    {/* Sticky bottom navigation — hidden on the Generate tab (has its own CTA) */}
+                    {selectedTab !== 'Generate' && (
+                        <View style={styles.bottomNav}>
+                            {currentIdx > 0 ? (
+                                <TouchableOpacity
+                                    style={styles.prevBtn}
+                                    onPress={() => handleTabPress(TABS[currentIdx - 1])}
+                                    activeOpacity={0.8}
+                                >
+                                    <MaterialIcons name="arrow-back-ios" size={13} color="rgba(255,255,255,0.65)" />
+                                    <Text style={styles.prevBtnText}>{TABS[currentIdx - 1]}</Text>
+                                </TouchableOpacity>
+                            ) : null}
+
+                            <TouchableOpacity
+                                style={styles.nextBtn}
+                                onPress={() => handleTabPress(TABS[currentIdx + 1])}
+                                activeOpacity={0.85}
+                            >
+                                <LinearGradient
+                                    colors={['#66cc33', '#047ec9']}
+                                    start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                                    style={styles.nextBtnGradient}
+                                >
+                                    <Text style={styles.nextBtnText}>
+                                        Next: {TABS[currentIdx + 1]}
+                                    </Text>
+                                    <MaterialIcons name="arrow-forward" size={16} color="#fff" />
+                                </LinearGradient>
+                            </TouchableOpacity>
+                        </View>
+                    )}
                 </View>
             </KeyboardAvoidingView>
 

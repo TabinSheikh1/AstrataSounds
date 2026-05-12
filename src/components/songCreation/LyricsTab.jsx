@@ -71,7 +71,13 @@ const LyricsTab = ({
                     onChangeText={setStyleText}
                 />
                 <Text style={styles.charCount}>{styleText.length} / 500</Text>
-                <View style={styles.tagRow}>
+                <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    style={styles.categoryScroll}
+                    contentContainerStyle={styles.categoryScrollContent}
+                    keyboardShouldPersistTaps="handled"
+                >
                     {CATEGORIES.map((cat) => {
                         const isSel = selectedCategory === cat.value;
                         return (
@@ -84,15 +90,21 @@ const LyricsTab = ({
                             </TouchableOpacity>
                         );
                     })}
-                </View>
+                </ScrollView>
             </GlassBox>
         )}
 
         {/* Vibe mode */}
         {styleMode === 'vibe' && (
             <View>
-                {/* Still show category */}
-                <View style={styles.tagRow}>
+                {/* Horizontal category scroll */}
+                <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    style={styles.categoryScroll}
+                    contentContainerStyle={styles.categoryScrollContent}
+                    keyboardShouldPersistTaps="handled"
+                >
                     {CATEGORIES.map((cat) => {
                         const isSel = selectedCategory === cat.value;
                         return (
@@ -101,8 +113,8 @@ const LyricsTab = ({
                             </TouchableOpacity>
                         );
                     })}
-                </View>
-                <View style={{ height: 10 }} />
+                </ScrollView>
+                <View style={{ height: 6 }} />
                 {vibesLoading ? (
                     <View style={styles.vibeLoadingRow}>
                         <ActivityIndicator size="small" color="#66cc33" />

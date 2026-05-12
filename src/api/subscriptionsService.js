@@ -26,3 +26,6 @@ export const openBillingPortal = (returnUrl) =>
 
 export const cancelSubscription = () => API.post('/subscriptions/cancel');
 export const reactivateSubscription = () => API.post('/subscriptions/reactivate');
+
+export const buyTokensCheckout = (payload) =>
+  API.post('/subscriptions/tokens/buy-checkout', payload);

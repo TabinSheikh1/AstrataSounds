@@ -10,12 +10,20 @@ import ForgotPasswordScreen from '../components/forgotPasswordScreen';
 import VerificationScreen from '../components/VerificationScreen';
 import ResetPasswordScreen from '../components/ResetPasswordScreen';
 import SongDetailScreen from '../components/SongDetailScreen';
-import MenuScreen from '../components/MenuScreen';
 import LeaderBoardScreen from '../components/LeaderBoardScreen';
 import SingersScreen from '../components/SingersScreen';
 import PricingScreen from '../components/PricingScreen';
 import BillingScreen from '../components/BillingScreen';
 import SubscriptionSuccessScreen from '../components/SubscriptionSuccessScreen';
+import ProfileScreen from '../components/ProfileScreen';
+import UserProfileScreen from '../components/UserProfileScreen';
+import ContactScreen from '../components/ContactScreen';
+import FAQsScreen from '../components/FAQsScreen';
+import FeedbackScreen from '../components/FeedbackScreen';
+import ShareScreen from '../components/ShareScreen';
+import TermsScreen from '../components/TermsScreen';
+import PrivacyScreen from '../components/PrivacyScreen';
+import UpdatesScreen from '../components/UpdatesScreen';
 import MainTabNavigator from './MainTabNavigator';
 
 const Stack = createNativeStackNavigator();
@@ -35,12 +43,20 @@ const AppStack = () => (
   <Stack.Navigator screenOptions={{ headerShown: false }}>
     <Stack.Screen name="MainApp" component={MainTabNavigator} />
     <Stack.Screen name="SongDetailScreen" component={SongDetailScreen} />
-    <Stack.Screen name="MenuScreen" component={MenuScreen} />
     <Stack.Screen name="LeaderBoardScreen" component={LeaderBoardScreen} />
     <Stack.Screen name="SingersScreen" component={SingersScreen} />
     <Stack.Screen name="PricingScreen" component={PricingScreen} />
     <Stack.Screen name="BillingScreen" component={BillingScreen} />
     <Stack.Screen name="SubscriptionSuccessScreen" component={SubscriptionSuccessScreen} />
+    <Stack.Screen name="ProfileScreen" component={ProfileScreen} />
+    <Stack.Screen name="UserProfileScreen" component={UserProfileScreen} />
+    <Stack.Screen name="ContactScreen" component={ContactScreen} />
+    <Stack.Screen name="FAQsScreen" component={FAQsScreen} />
+    <Stack.Screen name="FeedbackScreen" component={FeedbackScreen} />
+    <Stack.Screen name="ShareScreen" component={ShareScreen} />
+    <Stack.Screen name="TermsScreen" component={TermsScreen} />
+    <Stack.Screen name="PrivacyScreen" component={PrivacyScreen} />
+    <Stack.Screen name="UpdatesScreen" component={UpdatesScreen} />
   </Stack.Navigator>
 );
 

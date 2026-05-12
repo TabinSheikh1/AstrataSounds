@@ -40,9 +40,7 @@ export const listenSong = async (id) => {
 };
 
 export const generateSongAudio = async (id, payload) => {
-  const response = await API.post(`/songs/${id}/generate`, payload, {
-    timeout: 1200000, // 20 minutes — AI audio generation
-  });
+  const response = await API.post(`/songs/${id}/generate`, payload);
   return response.data;
 };
 
@@ -54,9 +52,7 @@ export const uploadSongImage = async (id, formData) => {
 };
 
 export const generateSongImage = async (id, payload) => {
-  const response = await API.post(`/songs/${id}/generate-image`, payload, {
-    timeout: 1200000, // 20 minutes — AI image generation
-  });
+  const response = await API.post(`/songs/${id}/generate-image`, payload);
   return response.data;
 };
 

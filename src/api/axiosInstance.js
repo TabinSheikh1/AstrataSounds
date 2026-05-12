@@ -6,7 +6,7 @@ const BASE_URL = "http://localhost:3000/api/v1"; // change this
 
 const API = axios.create({
   baseURL: BASE_URL,
-  timeout: 10000,
+  timeout: 0, // no timeout — AI generation can take several minutes
 });
 
 let isRefreshing = false;
