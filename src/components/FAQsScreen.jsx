@@ -32,16 +32,16 @@ const FAQS = [
     color: '#047ec9',
     items: [
       {
-        q: 'How many tokens do I get per month?',
-        a: 'Token allocations depend on your plan:\n• Harmony (Free): 500 tokens\n• Melody: 2,500 tokens\n• Symphony: 7,000 tokens\n\nEach song generation costs 70 tokens.',
+        q: 'How many songs do I get per month?',
+        a: 'Monthly song credits depend on your plan:\n• Spark (Free): 5 songs\n• Basic ($14.99/mo): 10 songs\n• Pro ($39.99/mo): 30 songs\n• Creator ($79.99/mo): 70 songs\n• Commercial ($149.99/mo): 150 songs\n\nFull songs cost 1 credit. A 30s reel costs 0.5 credits. A 15s reel costs 0.25 credits.',
       },
       {
-        q: 'What happens when I run out of tokens?',
-        a: 'Your tokens reset at the start of each billing cycle. If you run out early, you can upgrade your plan to get more tokens immediately, or wait for the next renewal.',
+        q: 'What happens when I run out of credits?',
+        a: 'Your credits reset at the start of each billing cycle. If you run out early, you can upgrade your plan or buy a one-time credit pack (5, 15, or 50 songs). Credit pack credits never expire.',
       },
       {
-        q: 'Can I roll over unused tokens?',
-        a: 'Tokens do not roll over between billing cycles. We recommend upgrading if you consistently run out before the month ends.',
+        q: 'Do unused credits roll over?',
+        a: 'Monthly subscription credits do not roll over. Credit pack credits (one-time purchases) never expire and carry over indefinitely.',
       },
     ],
   },
@@ -52,7 +52,7 @@ const FAQS = [
     items: [
       {
         q: 'Can I use generated songs commercially?',
-        a: 'Melody and Symphony plan subscribers receive a commercial usage license for all generated songs. Free (Harmony) plan songs are for personal use only.',
+        a: 'Creator and Commercial plan subscribers receive a full commercial usage license for all generated songs. Free (Spark) and Basic plan songs are for personal use only. Pro plan includes advanced controls but not commercial licensing.',
       },
       {
         q: 'Do I own the songs I create?',
@@ -71,7 +71,7 @@ const FAQS = [
     items: [
       {
         q: 'What should I do if generation fails?',
-        a: 'Failed generations do not consume tokens. Try again with a slightly different prompt. If the problem persists, contact us at support@astratasounds.com.',
+        a: 'Failed generations do not consume credits. Try again with a slightly different prompt. If the problem persists, contact us at support@astratasounds.com.',
       },
       {
         q: 'Can I download my songs?',

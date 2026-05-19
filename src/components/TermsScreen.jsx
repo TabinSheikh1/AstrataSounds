@@ -27,7 +27,7 @@ const SECTIONS = [
   {
     icon: 'copyright',
     title: '4. Intellectual Property',
-    body: 'You retain ownership of songs you generate within your subscription. AstrataSound retains all rights to the platform, AI models, and underlying technology. Harmony (free) plan users receive a personal-use license only. Melody and Symphony subscribers receive a commercial-use license.',
+    body: 'You retain ownership of songs you generate within your subscription. AstrataSound retains all rights to the platform, AI models, and underlying technology. Spark (free) and Basic plan users receive a personal-use license only. Creator and Commercial plan subscribers receive a full commercial-use license.',
   },
   {
     icon: 'credit-card',

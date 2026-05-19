@@ -158,7 +158,7 @@ const SubscriptionSuccessScreen = () => {
             <Text style={styles.planName}>{planName}</Text>
           </Text>
           <Text style={styles.note}>
-            Your tokens have been refreshed. Start creating AI music now.
+            Your song credits have been refreshed. Start creating AI music now.
           </Text>
         </Animated.View>
 

@@ -1,10 +1,9 @@
 import API from './axiosInstance';
 import axios from 'axios';
-
-const BASE_URL = 'http://localhost:3000/api/v1';
+import { API_BASE_URL } from '../config/api';
 
 // Public — no auth required
-export const getPlans = () => axios.get(`${BASE_URL}/subscriptions/plans`);
+export const getPlans = () => axios.get(`${API_BASE_URL}/subscriptions/plans`);
 
 // Authenticated
 export const getMySubscription = () => API.get('/subscriptions/me');
@@ -27,5 +26,10 @@ export const openBillingPortal = (returnUrl) =>
 export const cancelSubscription = () => API.post('/subscriptions/cancel');
 export const reactivateSubscription = () => API.post('/subscriptions/reactivate');
 
-export const buyTokensCheckout = (payload) =>
-  API.post('/subscriptions/tokens/buy-checkout', payload);
+// Credit packs: packSize is 5 | 15 | 50
+export const creditPackCheckout = (payload) =>
+  API.post('/subscriptions/credit-packs/checkout', payload);
+
+// Cover art: style is 'standard' ($0.99) | 'premium' ($1.99), songId is UUID
+export const coverArtCheckout = (payload) =>
+  API.post('/subscriptions/cover-art/checkout', payload);

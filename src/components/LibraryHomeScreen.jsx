@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   View,
   Text,
@@ -29,7 +30,7 @@ import { launchImageLibrary } from 'react-native-image-picker';
 
 const { width } = Dimensions.get('window');
 const MAIN_TABS = ['Songs', 'Vibe', 'Playlist'];
-const FILE_BASE = 'http://localhost:3000';
+import { SERVER_URL as FILE_BASE } from '../config/api';
 
 // ── Enum option sets ────────────────────────────────────────
 const ENERGY_OPTIONS = [
@@ -990,8 +991,10 @@ const LibraryHomeScreen = () => {
     }
   }, []);
 
+  // Re-fetch songs every time the screen comes into focus so newly created songs (with images) appear immediately
+  useFocusEffect(useCallback(() => { fetchSongs(); }, [fetchSongs]));
+
   useEffect(() => {
-    fetchSongs();
     fetchVibes();
     fetchPlaylists();
   }, []);
@@ -1016,8 +1019,13 @@ const LibraryHomeScreen = () => {
   };
 
   const handleCreateVibe = async (payload) => {
-    const newVibe = await createVibe(payload);
-    setVibes((prev) => [newVibe?.data ?? newVibe, ...prev]);
+    try {
+      const newVibe = await createVibe(payload);
+      setVibes((prev) => [newVibe?.data ?? newVibe, ...prev]);
+    } catch (err) {
+      const msg = err?.response?.data?.message ?? err?.message ?? 'Could not create Vibe preset.';
+      Alert.alert('Vibe Limit Reached', Array.isArray(msg) ? msg.join('\n') : msg);
+    }
   };
 
   const handleDeleteVibe = async (id) => {

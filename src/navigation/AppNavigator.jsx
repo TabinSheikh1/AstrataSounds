@@ -25,11 +25,13 @@ import TermsScreen from '../components/TermsScreen';
 import PrivacyScreen from '../components/PrivacyScreen';
 import UpdatesScreen from '../components/UpdatesScreen';
 import MainTabNavigator from './MainTabNavigator';
+import ReviewPendingScreen from '../components/StartScreen'
 
 const Stack = createNativeStackNavigator();
 
 const AuthStack = () => (
-  <Stack.Navigator screenOptions={{ headerShown: false }}>
+  <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName='LoginScreen'>
+    {/* <Stack.Screen name="Start" component={ReviewPendingScreen} /> */}
     <Stack.Screen name="LoginScreen" component={LoginScreen} />
     <Stack.Screen name="SignUpScreen" component={SignUpScreen} />
     <Stack.Screen name="ForgotPasswordScreen" component={ForgotPasswordScreen} />
@@ -68,7 +70,7 @@ const AppNavigator = () => {
   useEffect(() => {
     const timer = setTimeout(() => {
       setShowSplash(false);
-    }, 2000);
+    }, 3000);
     return () => clearTimeout(timer);
   }, []);
 

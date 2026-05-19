@@ -13,36 +13,57 @@ import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation } from '@react-navigation/native';
 
 const PLAN_PERKS = {
-  Melody: [
-    '2,500 tokens/month (~35 AI songs)',
-    '30 downloads/month',
-    '25 saved Vibe presets',
-    'Unlimited playlists',
-    'Priority generation queue',
+  Basic: [
+    '10 AI songs/month',
+    '10 downloads/month',
+    '15 saved Vibe presets',
+    '25 playlists',
+    'No watermark',
   ],
-  Symphony: [
-    '7,000 tokens/month (~100 AI songs)',
+  Pro: [
+    '30 AI songs/month',
     'Unlimited downloads',
-    'Unlimited Vibe presets',
-    'Unlimited playlists',
+    'Unlimited Vibe presets & playlists',
+    'Priority generation queue',
+    'Advanced style & quality controls',
+  ],
+  Creator: [
+    '70 AI songs/month',
+    'Unlimited downloads & Vibe presets',
+    'Priority generation queue',
     'Commercial use license',
     'Early access to new features',
   ],
+  Commercial: [
+    '150 AI songs/month',
+    'Unlimited everything',
+    'Highest priority queue',
+    'Full commercial & white-label license',
+  ],
+};
+
+const PLAN_PRICE = {
+  Basic: '$14.99/mo',
+  Pro: '$39.99/mo',
+  Creator: '$79.99/mo',
+  Commercial: '$149.99/mo',
 };
 
 const UpgradePromptModal = ({
   visible,
   onClose,
-  currentPlanName = 'Harmony',
+  currentPlanName = 'Spark',
   blockedFeature = 'this feature',
   nextPlan = null,
 }) => {
   const navigation = useNavigation();
 
-  const suggestedPlan = nextPlan?.name ?? (currentPlanName === 'Harmony' ? 'Melody' : 'Symphony');
+  const planOrder = ['Spark', 'Basic', 'Pro', 'Creator', 'Commercial'];
+  const currentIdx = planOrder.indexOf(currentPlanName);
+  const defaultNext = planOrder[Math.min(currentIdx + 1, planOrder.length - 1)];
+  const suggestedPlan = nextPlan?.name ?? defaultNext;
   const perks = PLAN_PERKS[suggestedPlan] ?? [];
-  const price =
-    suggestedPlan === 'Melody' ? '$9.99/mo' : '$24.99/mo';
+  const price = PLAN_PRICE[suggestedPlan] ?? '';
 
   const handleUpgrade = () => {
     onClose();

@@ -16,8 +16,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { getUserPublicProfile } from '../api/userService';
-
-const BASE_URL = 'http://localhost:3000';
+import { SERVER_URL as BASE_URL } from '../config/api';
 
 const buildAvatarUri = (profilePicture) => {
   if (!profilePicture) return null;
