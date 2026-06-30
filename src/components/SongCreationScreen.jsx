@@ -11,6 +11,7 @@ import { useNavigation } from '@react-navigation/native';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { createSong, generateSongAudio, generateSongImage, uploadSongImage } from '../api/songsService';
 import { getMyVibes } from '../api/vibesService';
+import { useSubscription } from '../hooks/useSubscription';
 import { TABS } from './songCreation/constants';
 import { styles } from './songCreation/songCreationStyles';
 import MoodPickerModal from './songCreation/MoodPickerModal';
@@ -83,6 +84,8 @@ const StepIndicator = ({ currentTab, onTabPress }) => {
 // ────────────────────────────────────────────────────────────
 const SongCreationScreen = () => {
     const navigation = useNavigation();
+    const { totalBalance, isBlocked, plan } = useSubscription();
+    const isSparkPlan = !plan || plan.tier === 'spark';
 
     const [selectedTab, setSelectedTab] = useState('Lyrics');
 
@@ -95,7 +98,6 @@ const SongCreationScreen = () => {
     const [lyricsMode, setLyricsMode]           = useState('manual');
     const [selectedMood, setSelectedMood]       = useState(null);
     const [showMoodPicker, setShowMoodPicker]   = useState(false);
-    const [gender, setGender]                   = useState('Male');
     const [vibes, setVibes]                     = useState([]);
     const [selectedVibeId, setSelectedVibeId]   = useState(null);
     const [vibesLoading, setVibesLoading]       = useState(false);
@@ -106,8 +108,9 @@ const SongCreationScreen = () => {
     const [uploadedImage, setUploadedImage] = useState(null);
 
     // Generate tab state
-    const [titleText, setTitleText]     = useState('');
-    const [description, setDescription] = useState('');
+    const [titleText, setTitleText]         = useState('');
+    const [description, setDescription]     = useState('');
+    const [selectedLanguage, setSelectedLanguage] = useState('english');
 
     // Generation
     const [generating, setGenerating] = useState(false);
@@ -167,19 +170,33 @@ const SongCreationScreen = () => {
         setLyricsText('');
         setLyricsMode('manual');
         setSelectedMood(null);
-        setGender('Male');
         setSelectedVibeId(null);
         setCoverMode('ai');
         setImagePrompt('');
         setUploadedImage(null);
         setTitleText('');
         setDescription('');
+        setSelectedLanguage('english');
     };
 
     const handleGenerate = async () => {
         if (!titleText.trim()) {
             Alert.alert('Title required', 'Go to the Create tab and add a song title.');
             handleTabPress('Generate');
+            return;
+        }
+
+        const requiredTokens = 100;
+
+        if (isBlocked) {
+            Alert.alert('Account Blocked', 'Your subscription is inactive. Please renew your plan to generate songs.');
+            return;
+        }
+        if (totalBalance < requiredTokens) {
+            Alert.alert(
+                'Not Enough Credits',
+                `You need 1 credit to generate a song. You currently have ${(totalBalance / 100).toFixed(2)} credits.\n\nPurchase a credit pack or upgrade your plan.`,
+            );
             return;
         }
 
@@ -214,6 +231,7 @@ const SongCreationScreen = () => {
             const generatePayload = {
                 category: selectedCategory,
                 lyricsMode: isManualLyrics ? 'manual' : 'ai',
+                language: selectedLanguage,
                 ...(isManualLyrics ? { lyrics: lyricsText.trim() } : {}),
                 ...(!isManualLyrics && selectedMood && !selectedVibeId ? { mood: selectedMood } : {}),
                 ...(selectedVibeId ? { vibeId: selectedVibeId } : { prompt: promptValue || 'A beautiful well-crafted song' }),
@@ -250,7 +268,7 @@ const SongCreationScreen = () => {
                     lyricsMode={lyricsMode} setLyricsMode={setLyricsMode}
                     selectedMood={selectedMood}
                     setShowMoodPicker={setShowMoodPicker}
-                    gender={gender} setGender={setGender}
+                    selectedLanguage={selectedLanguage} setSelectedLanguage={setSelectedLanguage}
                     vibes={vibes} selectedVibeId={selectedVibeId} setSelectedVibeId={setSelectedVibeId}
                     vibesLoading={vibesLoading}
                 />
@@ -263,6 +281,7 @@ const SongCreationScreen = () => {
                     imagePrompt={imagePrompt} setImagePrompt={setImagePrompt}
                     uploadedImage={uploadedImage}
                     pickImage={pickImage}
+                    isSparkPlan={isSparkPlan}
                 />
             </Animated.View>
         );
@@ -282,6 +301,8 @@ const SongCreationScreen = () => {
                     instrumental={instrumental}
                     titleText={titleText} setTitleText={setTitleText}
                     description={description} setDescription={setDescription}
+                    selectedLanguage={selectedLanguage}
+                    totalBalance={totalBalance}
                     handleGenerate={handleGenerate}
                     generating={generating}
                     btnScale={btnScale}

@@ -8,7 +8,7 @@ import { styles } from './songCreationStyles';
 import SectionLabel from './SectionLabel';
 import GlassBox from './GlassBox';
 
-const CoverTab = ({ coverMode, setCoverMode, imagePrompt, setImagePrompt, uploadedImage, pickImage }) => (
+const CoverTab = ({ coverMode, setCoverMode, imagePrompt, setImagePrompt, uploadedImage, pickImage, isSparkPlan }) => (
     <ScrollView style={styles.tabContent} contentContainerStyle={styles.tabContentInner} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
 
         <View style={styles.coverHeaderCard}>
@@ -55,10 +55,20 @@ const CoverTab = ({ coverMode, setCoverMode, imagePrompt, setImagePrompt, upload
                     />
                     <Text style={styles.charCount}>{imagePrompt.length} / 400</Text>
                 </GlassBox>
-                <View style={styles.aiCoverNote}>
-                    <MaterialIcons name="info-outline" size={14} color="rgba(255,255,255,0.35)" />
-                    <Text style={styles.aiCoverNoteText}>Cover is generated after song creation using DALL-E 3 · 1024×1024</Text>
-                </View>
+                {isSparkPlan ? (
+                    <View style={styles.aiCoverPurchaseNote}>
+                        <MaterialIcons name="lock" size={14} color="#FBBF24" />
+                        <Text style={styles.aiCoverPurchaseNoteText}>
+                            AI cover art requires a one-time purchase on the Spark plan ($0.99 standard · $1.99 premium).
+                            You can buy it from Song Detail after generation, or upgrade to Basic to include it.
+                        </Text>
+                    </View>
+                ) : (
+                    <View style={styles.aiCoverNote}>
+                        <MaterialIcons name="info-outline" size={14} color="rgba(255,255,255,0.35)" />
+                        <Text style={styles.aiCoverNoteText}>Cover is generated after song creation using DALL-E 3 · 1024×1024</Text>
+                    </View>
+                )}
             </>
         )}
 

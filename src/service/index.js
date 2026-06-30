@@ -1,5 +1,7 @@
+import { SERVER_URL } from '../config/api';
+
 export async function generateSong(payload) {
-  const res = await fetch('http://localhost:3000/song/generate', {
+  const res = await fetch(`${SERVER_URL}/song/generate`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'

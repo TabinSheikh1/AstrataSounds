@@ -25,8 +25,7 @@ import {
 } from 'lucide-react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { logout } from '../store/slices/authSlice';
-
-const BASE_URL = 'http://localhost:3000';
+import { SERVER_URL as BASE_URL } from '../config/api';
 const DRAWER_WIDTH = Dimensions.get('window').width * 0.85;
 
 const buildAvatarUri = (profilePicture) => {

@@ -22,7 +22,7 @@ import {
   cancelSubscription,
   reactivateSubscription,
   openBillingPortal,
-  buyTokensCheckout,
+  creditPackCheckout,
 } from '../api/subscriptionsService';
 
 const STATUS_CONFIG = {
@@ -62,7 +62,7 @@ const CancelModal = ({ visible, periodEnd, onCancel, onKeep, loading }) => (
       <Text style={cmStyles.body}>
         Your plan stays active until{' '}
         <Text style={cmStyles.bold}>{fmtDate(periodEnd)}</Text>. After that you'll
-        revert to Harmony (free).
+        revert to Spark (free).
       </Text>
       <TouchableOpacity
         onPress={onCancel}
@@ -161,6 +161,9 @@ const BillingScreen = () => {
     refreshAll,
   } = useSubscription();
 
+  // Credits display helpers (100 tokens = 1 full-song credit)
+  const toCredits = (t) => (t / 100).toFixed(1).replace(/\.0$/, '');
+
   const [cancelModalVisible, setCancelModalVisible] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [portalLoading, setPortalLoading] = useState(false);
@@ -180,7 +183,7 @@ const BillingScreen = () => {
   const cancelAtEnd = subscription?.cancelAtPeriodEnd ?? false;
   const periodEnd = subscription?.currentPeriodEnd;
   const periodEndFmt = fmtDate(periodEnd);
-  const downloadsUsed = tokens?.downloadsUsedThisPeriod ?? 0;
+  const downloadsUsed = subscription?.downloadsUsedThisPeriod ?? 0;
   const downloadLimit = plan?.monthlyDownloadLimit ?? 5;
 
   const handleCancel = async () => {
@@ -213,7 +216,9 @@ const BillingScreen = () => {
   const handleBuyTokens = async () => {
     setBuyTokensLoading(true);
     try {
-      const res = await buyTokensCheckout({
+      // Default to 5-song pack from billing screen; full pack selection is on PricingScreen
+      const res = await creditPackCheckout({
+        packSize: 5,
         successUrl: 'strataSounds://billing?tokenPurchase=success',
         cancelUrl: 'strataSounds://billing?tokenPurchase=cancel',
       });
@@ -292,7 +297,7 @@ const BillingScreen = () => {
             <View style={styles.cancelBanner}>
               <MaterialIcons name="info" size={16} color="#FBBF24" />
               <Text style={styles.cancelBannerText}>
-                Your subscription ends on {periodEndFmt}. After that, you'll revert to Harmony.
+                Your subscription ends on {periodEndFmt}. After that, you'll revert to Spark.
               </Text>
             </View>
           )}
@@ -302,7 +307,7 @@ const BillingScreen = () => {
             <Text style={styles.sectionLabel}>CURRENT PLAN</Text>
             <View style={styles.planRow}>
               <View>
-                <Text style={styles.planName}>{plan?.name ?? 'Harmony'}</Text>
+                <Text style={styles.planName}>{plan?.name ?? 'Spark'}</Text>
                 {isPaid && subscription?.billingInterval && (
                   <Text style={styles.billingInterval}>
                     {subscription.billingInterval === 'yearly' ? 'Yearly billing' : 'Monthly billing'}
@@ -326,17 +331,21 @@ const BillingScreen = () => {
             )}
           </View>
 
-          {/* Token balance */}
+          {/* Song Credits balance */}
           <View style={styles.sectionCard}>
-            <Text style={styles.sectionLabel}>TOKEN BALANCE</Text>
+            <Text style={styles.sectionLabel}>SONG CREDITS</Text>
             <View style={styles.tokenRow}>
               <View>
                 <Text style={[styles.tokenValue, { color: tokenColor }]}>
-                  {tokenBalance}
+                  {toCredits(tokenBalance)}
                 </Text>
-                <Text style={styles.tokenOf}>of {tokenGranted} tokens remaining</Text>
+                <Text style={styles.tokenOf}>of {toCredits(tokenGranted)} credits this period</Text>
               </View>
-              <Text style={styles.tokenCost}>7 / song</Text>
+              <View style={{ alignItems: 'flex-end' }}>
+                <Text style={styles.tokenCost}>Full song · 1 credit</Text>
+                <Text style={[styles.tokenCost, { marginTop: 2 }]}>30s reel · 0.5</Text>
+                <Text style={[styles.tokenCost, { marginTop: 2 }]}>15s reel · 0.25</Text>
+              </View>
             </View>
             <View style={styles.barTrack}>
               <View
@@ -353,16 +362,16 @@ const BillingScreen = () => {
             )}
           </View>
 
-          {/* Purchased tokens wallet */}
-          <View style={styles.sectionCard}>
-            <Text style={styles.sectionLabel}>TOKEN WALLET</Text>
+          {/* Credit wallet (purchased packs) */}
+          {/* <View style={styles.sectionCard}>
+            <Text style={styles.sectionLabel}>CREDIT WALLET</Text>
             <View style={styles.tokenRow}>
               <View>
                 <Text style={[styles.tokenValue, { color: '#66cc33', fontSize: 24 }]}>
-                  {purchasedBalance}
-                  <Text style={styles.tokenOf}> purchased</Text>
+                  {toCredits(purchasedBalance)}
+                  <Text style={styles.tokenOf}> pack credits</Text>
                 </Text>
-                <Text style={styles.tokenOf}>Total available: {totalBalance} tokens</Text>
+                <Text style={styles.tokenOf}>Total available: {toCredits(totalBalance)} credits</Text>
               </View>
               <TouchableOpacity
                 onPress={handleBuyTokens}
@@ -380,14 +389,14 @@ const BillingScreen = () => {
                   ) : (
                     <>
                       
-                      <Text style={styles.buyTokensText}>70 tokens{'\n'}$2.50</Text>
+                      <Text style={styles.buyTokensText}>5 songs{'\n'}$7.99</Text>
                     </>
                   )}
                 </LinearGradient>
               </TouchableOpacity>
             </View>
-            <Text style={styles.resetText}>Purchased tokens never expire or reset.</Text>
-          </View>
+            <Text style={styles.resetText}>Purchased song credits never expire or reset.</Text>
+          </View> */}
 
           {/* Downloads */}
           {plan && (

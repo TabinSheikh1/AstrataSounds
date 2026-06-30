@@ -15,25 +15,34 @@ import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { createCheckoutSession } from '../api/subscriptionsService';
 
 const PLAN_PERKS = {
-  Harmony: [
-    '500 tokens/month (~7 AI songs)',
-    '5 downloads/month',
-    '5 Vibe presets',
-    '10 playlists max',
+  Basic: [
+    '10 AI songs/month',
+    '10 downloads/month',
+    '15 Vibe presets',
+    '25 playlists',
+    'No watermark',
   ],
-  Melody: [
-    '2,500 tokens/month (~35 AI songs)',
-    '30 downloads/month',
-    '25 Vibe presets',
-    'Unlimited playlists',
-    'Priority queue',
+  Pro: [
+    '30 AI songs/month',
+    'Unlimited downloads',
+    'Unlimited Vibe presets & playlists',
+    'Priority generation queue',
+    'Advanced style controls',
   ],
-  Symphony: [
-    '7,000 tokens/month (~100 AI songs)',
-    'Unlimited downloads & Vibes',
-    'Unlimited playlists',
-    'Commercial license',
-    'Early access features',
+  Creator: [
+    '70 AI songs/month',
+    'Unlimited downloads',
+    'Unlimited Vibe presets & playlists',
+    'Priority generation queue',
+    'Commercial use license',
+    'Early access to new features',
+  ],
+  Commercial: [
+    '150 AI songs/month',
+    'Unlimited everything',
+    'Highest priority queue',
+    'Full commercial & white-label license',
+    'Dedicated support',
   ],
 };
 
