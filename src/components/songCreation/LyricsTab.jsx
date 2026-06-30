@@ -4,7 +4,7 @@ import {
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import { CATEGORIES } from './constants';
+import { CATEGORIES, LANGUAGES } from './constants';
 import { styles } from './songCreationStyles';
 import SectionLabel from './SectionLabel';
 import GlassBox from './GlassBox';
@@ -18,7 +18,7 @@ const LyricsTab = ({
     lyricsMode, setLyricsMode,
     selectedMood, setSelectedMood,
     setShowMoodPicker,
-    gender, setGender,
+    selectedLanguage, setSelectedLanguage,
     vibes, selectedVibeId, setSelectedVibeId, vibesLoading,
 }) => (
     <ScrollView style={styles.tabContent} contentContainerStyle={styles.tabContentInner} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
@@ -189,25 +189,30 @@ const LyricsTab = ({
             </TouchableOpacity>
         </GlassBox>
 
-        {/* Voice Gender */}
-        <SectionLabel icon="person" title="Voice Gender" />
+        {/* Song Language */}
+        <SectionLabel icon="language" title="Song Language" />
         <View style={styles.genderRow}>
-            {['Male', 'Female', 'Random'].map((g) => (
-                <TouchableOpacity
-                    key={g}
-                    onPress={() => setGender(g)}
-                    style={[styles.genderBtn, gender === g && styles.genderBtnActive]}
-                    activeOpacity={0.8}
-                >
-                    <MaterialIcons
-                        name={g === 'Male' ? 'face' : g === 'Female' ? 'face-3' : 'shuffle'}
-                        size={14}
-                        color={gender === g ? '#fff' : 'rgba(255,255,255,0.6)'}
-                        style={{ marginRight: 4 }}
-                    />
-                    <Text style={[styles.genderBtnText, gender === g && styles.genderBtnTextActive]}>{g}</Text>
-                </TouchableOpacity>
-            ))}
+            {LANGUAGES.map((lang) => {
+                const isSelected = selectedLanguage === lang.value;
+                return (
+                    <TouchableOpacity
+                        key={lang.value}
+                        onPress={() => setSelectedLanguage(lang.value)}
+                        style={[styles.genderBtn, isSelected && styles.genderBtnActive]}
+                        activeOpacity={0.8}
+                    >
+                        <Text style={{ fontSize: 13, marginRight: 5 }}>{lang.flag}</Text>
+                        <View>
+                            <Text style={[styles.genderBtnText, isSelected && styles.genderBtnTextActive]}>
+                                {lang.label}
+                            </Text>
+                            {isSelected && (
+                                <Text style={styles.langNativeText}>{lang.native}</Text>
+                            )}
+                        </View>
+                    </TouchableOpacity>
+                );
+            })}
         </View>
 
         {/* <CreateButton label="GENERATE SONG" icon="auto-awesome" /> */}

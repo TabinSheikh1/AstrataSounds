@@ -350,6 +350,13 @@ export const styles = StyleSheet.create({
         fontFamily: 'Oswald-Bold',
     },
     genderBtnTextActive: { color: '#fff' },
+    langNativeText: {
+        color: 'rgba(255,255,255,0.55)',
+        fontSize: 10,
+        fontFamily: 'Oswald-Regular',
+        textAlign: 'center',
+        marginTop: 1,
+    },
 
     // ── Cover tab ──────────────────────────────────────────────
     coverHeaderCard: {
@@ -632,4 +639,115 @@ export const styles = StyleSheet.create({
     },
     genDots: { flexDirection: 'row', gap: 8, marginTop: 8 },
     genDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#66cc33' },
+
+    // ── Cover art purchase note (Spark plan) ──────────────────
+    aiCoverPurchaseNote: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        gap: 8,
+        backgroundColor: 'rgba(251,191,36,0.08)',
+        borderRadius: 10,
+        padding: 10,
+        marginTop: 8,
+        borderWidth: 1,
+        borderColor: 'rgba(251,191,36,0.2)',
+    },
+    aiCoverPurchaseNoteText: {
+        flex: 1,
+        color: '#FBBF24',
+        fontSize: 11,
+        fontFamily: 'Oswald-Regular',
+        lineHeight: 16,
+    },
+
+    // ── Duration picker ────────────────────────────────────────
+    durationRow: {
+        flexDirection: 'row',
+        gap: 8,
+        marginBottom: 8,
+    },
+    durationCard: {
+        flex: 1,
+        backgroundColor: 'rgba(255,255,255,0.06)',
+        borderRadius: 14,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
+        alignItems: 'center',
+        padding: 10,
+        paddingBottom: 12,
+    },
+    durationCardSelected: {
+        borderColor: 'rgba(102,204,51,0.6)',
+        backgroundColor: 'rgba(102,204,51,0.1)',
+    },
+    durationCardAffordable: {
+        opacity: 0.55,
+    },
+    durationIconWrap: {
+        width: 36,
+        height: 36,
+        borderRadius: 10,
+        backgroundColor: 'rgba(255,255,255,0.08)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 6,
+    },
+    durationIconWrapSelected: {
+        backgroundColor: 'rgba(102,204,51,0.25)',
+    },
+    durationLabel: {
+        color: 'rgba(255,255,255,0.6)',
+        fontSize: 12,
+        fontFamily: 'Oswald-Bold',
+        letterSpacing: 0.3,
+        textAlign: 'center',
+    },
+    durationLabelSelected: {
+        color: '#fff',
+    },
+    durationDesc: {
+        color: 'rgba(255,255,255,0.3)',
+        fontSize: 9,
+        fontFamily: 'Oswald-Regular',
+        textAlign: 'center',
+        marginTop: 2,
+        marginBottom: 6,
+    },
+    durationCostBadge: {
+        backgroundColor: 'rgba(255,255,255,0.08)',
+        borderRadius: 6,
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+    },
+    durationCostBadgeSelected: {
+        backgroundColor: 'rgba(102,204,51,0.2)',
+    },
+    durationCostText: {
+        color: 'rgba(255,255,255,0.4)',
+        fontSize: 9,
+        fontFamily: 'Oswald-Bold',
+        letterSpacing: 0.5,
+    },
+    durationCostTextSelected: {
+        color: '#66cc33',
+    },
+    durationLockedBadge: {
+        position: 'absolute',
+        top: 6,
+        right: 6,
+    },
+
+    // ── Credit balance indicator ───────────────────────────────
+    creditBalanceRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 5,
+        marginBottom: 12,
+        paddingHorizontal: 2,
+    },
+    creditBalanceText: {
+        fontSize: 11,
+        fontFamily: 'Oswald-Regular',
+        flex: 1,
+    },
 });
