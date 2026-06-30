@@ -1,11 +1,10 @@
 import axios from "axios";
 import { store } from "../store/store";
 import { logout, updateTokens } from "../store/slices/authSlice";
-
-const BASE_URL = "http://localhost:3000/api/v1"; // change this
+import { API_BASE_URL } from '../config/api';
 
 const API = axios.create({
-  baseURL: BASE_URL,
+  baseURL: API_BASE_URL,
   timeout: 0, // no timeout — AI generation can take several minutes
 });
 
@@ -77,7 +76,7 @@ API.interceptors.response.use(
           return Promise.reject(error);
         }
 
-        const refreshResponse = await axios.post(`${BASE_URL}/auth/refresh`, {
+        const refreshResponse = await axios.post(`${API_BASE_URL}/auth/refresh`, {
           refreshToken,
         });
 

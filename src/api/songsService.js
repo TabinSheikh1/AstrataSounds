@@ -56,6 +56,21 @@ export const generateSongImage = async (id, payload) => {
   return response.data;
 };
 
+export const createReel = async (id, payload) => {
+  const response = await API.post(`/songs/${id}/reel`, payload);
+  return response.data;
+};
+
+export const downloadSongFile = async (id) => {
+  const response = await API.post(`/songs/${id}/download`);
+  return response.data;
+};
+
+export const downloadReelFile = async (id) => {
+  const response = await API.post(`/songs/${id}/download-reel`);
+  return response.data;
+};
+
 export const getLeaderboard = async (limit = 50) => {
   const response = await API.get(`/leaderboard?limit=${limit}`);
   return response.data;
