@@ -4,6 +4,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useSubscription } from '../hooks/useSubscription';
 
 import SplashScreen from '../components/SplashScreen';
+import ContentReviewScreen from '../components/ContentReviewScreen';
 import LoginScreen from '../components/LoginScreen';
 import SignUpScreen from '../components/SignUpScreen';
 import ForgotPasswordScreen from '../components/forgotPasswordScreen';
@@ -64,6 +65,7 @@ const AppNavigator = () => {
   const { isAuthenticated } = useSelector((state) => state.auth);
   const { refreshAll, fetchPlans } = useSubscription();
   const [showSplash, setShowSplash] = useState(true);
+  const [showReview, setShowReview] = useState(true);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -83,6 +85,10 @@ const AppNavigator = () => {
 
   if (showSplash) {
     return <SplashScreen />;
+  }
+
+  if (showReview) {
+    return <ContentReviewScreen onContinue={() => setShowReview(false)} />;
   }
 
   return isAuthenticated ? <AppStack /> : <AuthStack />;
