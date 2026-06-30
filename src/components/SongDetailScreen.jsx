@@ -11,22 +11,25 @@ import {
     Platform,
     ScrollView,
     Alert,
-    Linking,
     Share,
+    PanResponder,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import TrackPlayer, { useProgress, State, usePlaybackState } from 'react-native-track-player';
+import TrackPlayer, { useProgress, State, usePlaybackState, RepeatMode } from 'react-native-track-player';
 import { useSubscription } from '../hooks/useSubscription';
 import UpgradePromptModal from './UpgradePromptModal';
+import ReelCreatorModal from './ReelCreatorModal';
+import DownloadSheet from './DownloadSheet';
 import { toggleLikeSong } from '../api/songsService';
 
 const { width, height } = Dimensions.get('window');
 const ALBUM_SIZE = width - 64;
-const SPEEDS = ['0.5x', '0.75x', '1.0x', '1.25x', '1.5x', '2.0x'];
-const FILE_BASE = 'http://localhost:3000';
+const SPEEDS       = ['0.5x', '0.75x', '1.0x', '1.25x', '1.5x', '2.0x'];
+const SPEED_VALUES = [0.5,    0.75,    1.0,    1.25,    1.5,    2.0];
+import { SERVER_URL as FILE_BASE } from '../config/api';
 
 const fmt = (secs) => {
     const s = Math.max(0, Math.floor(secs));
@@ -45,10 +48,6 @@ const SongDetailScreen = () => {
     const route = useRoute();
     const song = route.params?.song ?? {};
 
-    const hasAudio = !!song.audioPath;
-    const audioUrl = hasAudio ? `${FILE_BASE}${song.audioPath}` : null;
-    const artworkUrl = song.imagePath ? `${FILE_BASE}${song.imagePath}` : null;
-
     const playbackState = usePlaybackState();
     const isPlaying = playbackState?.state === State.Playing;
     const progress = useProgress(500);
@@ -58,11 +57,72 @@ const SongDetailScreen = () => {
     const [isLiked, setIsLiked] = useState(song.isLiked ?? false);
     const [likesCount, setLikesCount] = useState(song.likesCount ?? song.likes ?? 0);
     const [isRepeat, setIsRepeat] = useState(false);
-    const [isShuffle, setIsShuffle] = useState(false);
     const [speedIdx, setSpeedIdx] = useState(2);
     const [playerReady, setPlayerReady] = useState(false);
-    const [isDownloading, setIsDownloading] = useState(false);
     const [upgradeModalVisible, setUpgradeModalVisible] = useState(false);
+    const [downloadSheetVisible, setDownloadSheetVisible] = useState(false);
+    const [reelModalVisible, setReelModalVisible] = useState(false);
+    const [currentSong, setCurrentSong] = useState(song);
+
+    // Always derived from currentSong so they update when reel creation / cover changes the song
+    const hasAudio  = !!currentSong.audioPath;
+    const audioUrl  = hasAudio ? `${FILE_BASE}${currentSong.audioPath}` : null;
+    // Cache-buster uses updatedAt so React Native's Image doesn't serve a stale cached version
+    const artworkUrl = currentSong.imagePath
+        ? `${FILE_BASE}${currentSong.imagePath}?t=${new Date(currentSong.updatedAt ?? 0).getTime()}`
+        : null;
+
+    // 'song' | 'reel' — tracks which audio is loaded in the player
+    const [activeTrack, setActiveTrack] = useState('song');
+    // Stores the full song duration so it stays accurate while the reel is playing
+    const [fullSongDuration, setFullSongDuration] = useState(0);
+
+    // Scrub state
+    const [isScrubbing, setIsScrubbing] = useState(false);
+    const [scrubPosition, setScrubPosition] = useState(0);
+    const [scrollEnabled, setScrollEnabled] = useState(true);
+    const trackWidthRef = useRef(0);
+    // Ref so PanResponder handlers always read the latest duration (avoids stale closure)
+    const durationRef = useRef(0);
+
+    const seekPanResponder = useRef(
+        PanResponder.create({
+            // Capture the touch before the ScrollView gets it
+            onStartShouldSetPanResponder: () => true,
+            onStartShouldSetPanResponderCapture: () => true,
+            onMoveShouldSetPanResponder: () => true,
+            onMoveShouldSetPanResponderCapture: () => true,
+            onPanResponderGrant: (evt) => {
+                const x = evt.nativeEvent.locationX;
+                const dur = durationRef.current;
+                if (dur <= 0 || trackWidthRef.current <= 0) return;
+                const pos = Math.max(0, Math.min(dur, (x / trackWidthRef.current) * dur));
+                setScrollEnabled(false);
+                setIsScrubbing(true);
+                setScrubPosition(pos);
+            },
+            onPanResponderMove: (evt) => {
+                const x = evt.nativeEvent.locationX;
+                const dur = durationRef.current;
+                if (dur <= 0 || trackWidthRef.current <= 0) return;
+                const pos = Math.max(0, Math.min(dur, (x / trackWidthRef.current) * dur));
+                setScrubPosition(pos);
+            },
+            onPanResponderRelease: (evt) => {
+                const x = evt.nativeEvent.locationX;
+                const dur = durationRef.current;
+                setScrollEnabled(true);
+                setIsScrubbing(false);
+                if (dur <= 0 || trackWidthRef.current <= 0) return;
+                const pos = Math.max(0, Math.min(dur, (x / trackWidthRef.current) * dur));
+                TrackPlayer.seekTo(pos);
+            },
+            onPanResponderTerminate: () => {
+                setScrollEnabled(true);
+                setIsScrubbing(false);
+            },
+        })
+    ).current;
 
     // Animations
     const playScale  = useRef(new Animated.Value(1)).current;
@@ -135,12 +195,54 @@ const SongDetailScreen = () => {
             Animated.timing(playScale, { toValue: 0.86, duration: 75, useNativeDriver: true }),
             Animated.spring(playScale, { toValue: 1, tension: 80, friction: 5, useNativeDriver: true }),
         ]).start();
-        if (!hasAudio || !playerReady) return;
+        if (!hasAudio) return;
+        // If reel was loaded, switch back to the full song first
+        if (activeTrack === 'reel') {
+            await TrackPlayer.reset();
+            await TrackPlayer.add({
+                id: song.id ?? 'current',
+                url: audioUrl,
+                title: song.title ?? 'Unknown',
+                artist: 'StrataSound AI',
+                artwork: artworkUrl ?? undefined,
+            });
+            await TrackPlayer.setRate(SPEED_VALUES[speedIdx]);
+            await TrackPlayer.setRepeatMode(isRepeat ? RepeatMode.Track : RepeatMode.Off);
+            setActiveTrack('song');
+            await TrackPlayer.play();
+            return;
+        }
+        if (!playerReady) return;
         if (isPlaying) {
             await TrackPlayer.pause();
         } else {
             await TrackPlayer.play();
         }
+    };
+
+    const handleReelPlay = async () => {
+        const reelUrl = `${FILE_BASE}${currentSong.reelPath}`;
+        if (activeTrack === 'reel' && isPlaying) {
+            await TrackPlayer.pause();
+            return;
+        }
+        if (activeTrack === 'reel' && !isPlaying) {
+            await TrackPlayer.play();
+            return;
+        }
+        // Switch from song to reel — always plays at 1x, no repeat
+        await TrackPlayer.reset();
+        await TrackPlayer.add({
+            id: `${song.id}-reel`,
+            url: reelUrl,
+            title: `${song.title ?? 'Unknown'} (Reel)`,
+            artist: 'StrataSound AI',
+            artwork: artworkUrl ?? undefined,
+        });
+        await TrackPlayer.setRate(1.0);
+        await TrackPlayer.setRepeatMode(RepeatMode.Off);
+        setActiveTrack('reel');
+        await TrackPlayer.play();
     };
 
     const handleLikePress = async () => {
@@ -161,7 +263,7 @@ const SongDetailScreen = () => {
         }
     };
 
-    const handleDownload = async () => {
+    const handleDownload = () => {
         if (!hasAudio) {
             Alert.alert('No Audio', 'This song has no audio generated yet.');
             return;
@@ -182,26 +284,7 @@ const SongDetailScreen = () => {
             );
             return;
         }
-        setIsDownloading(true);
-        try {
-            const canOpen = await Linking.canOpenURL(audioUrl);
-            if (canOpen) {
-                await Linking.openURL(audioUrl);
-                // Refresh token/download counts after download
-                await refreshAll();
-            } else {
-                Alert.alert('Error', 'Cannot open audio file URL.');
-            }
-        } catch (e) {
-            const apiMsg = e?.response?.data?.message;
-            if (e?.response?.status === 403 && apiMsg) {
-                Alert.alert('Download Blocked', apiMsg);
-            } else {
-                Alert.alert('Download Failed', 'Could not download the file. Please try again.');
-            }
-        } finally {
-            setIsDownloading(false);
-        }
+        setDownloadSheetVisible(true);
     };
 
     const handleShare = async () => {
@@ -217,8 +300,19 @@ const SongDetailScreen = () => {
 
     const duration = progress.duration || 0;
     const position = progress.position || 0;
-    const progressPct = duration > 0 ? `${Math.min((position / duration) * 100, 100)}%` : '0%';
-    const playedBars = duration > 0 ? Math.floor((position / duration) * 28) : 0;
+
+    // Keep durationRef in sync so PanResponder handlers always have the latest value
+    useEffect(() => { durationRef.current = duration; }, [duration]);
+
+    // Capture full song duration as soon as TrackPlayer reports it — only while song (not reel) is loaded
+    useEffect(() => {
+        if (activeTrack === 'song' && duration > 0) {
+            setFullSongDuration(duration);
+        }
+    }, [duration, activeTrack]);
+    const displayPosition = isScrubbing ? scrubPosition : position;
+    const progressPct = duration > 0 ? `${Math.min((displayPosition / duration) * 100, 100)}%` : '0%';
+    const playedBars = duration > 0 ? Math.floor((displayPosition / duration) * 28) : 0;
 
     return (
         <View style={styles.root}>
@@ -236,7 +330,7 @@ const SongDetailScreen = () => {
                 style={styles.bgOverlay}
             />
 
-            <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false} bounces={false}>
+            <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false} bounces={false} scrollEnabled={scrollEnabled}>
                 {/* Top bar */}
                 <View style={styles.topBar}>
                     <TouchableOpacity style={styles.topBtn} onPress={() => navigation.goBack()}>
@@ -313,17 +407,22 @@ const SongDetailScreen = () => {
 
                 {/* Progress */}
                 <View style={styles.progressSection}>
-                    <View style={styles.progressTrack}>
+                    <View
+                        style={styles.progressTrack}
+                        onLayout={(e) => { trackWidthRef.current = e.nativeEvent.layout.width; }}
+                        {...seekPanResponder.panHandlers}
+                        hitSlop={{ top: 12, bottom: 12, left: 0, right: 0 }}
+                    >
                         <LinearGradient
                             colors={['#66cc33', '#047ec9']}
                             start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
                             style={[styles.progressFill, { width: progressPct }]}
                         >
-                            <View style={styles.progressThumb} />
+                            <View style={[styles.progressThumb, isScrubbing && styles.progressThumbActive]} />
                         </LinearGradient>
                     </View>
                     <View style={styles.timeRow}>
-                        <Text style={styles.timeText}>{fmt(position)}</Text>
+                        <Text style={styles.timeText}>{fmt(displayPosition)}</Text>
                         <Text style={styles.timeText}>{fmt(duration)}</Text>
                     </View>
                 </View>
@@ -331,13 +430,9 @@ const SongDetailScreen = () => {
                 {/* Main Controls */}
                 <View style={styles.controlsRow}>
                     <TouchableOpacity
-                        style={[styles.iconBtn, isShuffle && styles.iconBtnOn]}
-                        onPress={() => setIsShuffle((p) => !p)}
+                        style={styles.skipBtn}
+                        onPress={() => TrackPlayer.seekTo(Math.max(0, position - 10))}
                     >
-                        <MaterialIcons name="shuffle" size={22} color={isShuffle ? '#66cc33' : 'rgba(255,255,255,0.6)'} />
-                    </TouchableOpacity>
-
-                    <TouchableOpacity style={styles.skipBtn} onPress={() => TrackPlayer.seekTo(Math.max(0, position - 10))}>
                         <MaterialIcons name="replay-10" size={36} color="rgba(255,255,255,0.8)" />
                     </TouchableOpacity>
 
@@ -358,51 +453,72 @@ const SongDetailScreen = () => {
                         </TouchableOpacity>
                     </Animated.View>
 
-                    <TouchableOpacity style={styles.skipBtn} onPress={() => TrackPlayer.seekTo(Math.min(duration, position + 10))}>
-                        <MaterialIcons name="forward-10" size={36} color="rgba(255,255,255,0.8)" />
-                    </TouchableOpacity>
-
                     <TouchableOpacity
-                        style={[styles.iconBtn, isRepeat && styles.iconBtnOn]}
-                        onPress={() => setIsRepeat((p) => !p)}
+                        style={styles.skipBtn}
+                        onPress={() => TrackPlayer.seekTo(Math.min(duration, position + 10))}
                     >
-                        <MaterialIcons name="repeat" size={22} color={isRepeat ? '#66cc33' : 'rgba(255,255,255,0.6)'} />
+                        <MaterialIcons name="forward-10" size={36} color="rgba(255,255,255,0.8)" />
                     </TouchableOpacity>
                 </View>
 
                 {/* Secondary Controls */}
                 <View style={styles.secondaryRow}>
+                    {/* Speed */}
                     <TouchableOpacity
                         style={styles.secondaryBtn}
-                        onPress={() => setSpeedIdx((i) => (i + 1) % SPEEDS.length)}
+                        onPress={() => {
+                            const next = (speedIdx + 1) % SPEEDS.length;
+                            setSpeedIdx(next);
+                            TrackPlayer.setRate(SPEED_VALUES[next]);
+                        }}
                     >
-                        <Text style={styles.speedText}>{SPEEDS[speedIdx]}</Text>
+                        <Text style={[styles.speedText, speedIdx !== 2 && styles.speedTextActive]}>
+                            {SPEEDS[speedIdx]}
+                        </Text>
                     </TouchableOpacity>
 
-                    {/* Download button — gated by subscription */}
+                    {/* Repeat */}
                     <TouchableOpacity
-                        style={[
-                            styles.secondaryBtn,
-                            !canDownload && styles.secondaryBtnDisabled,
-                        ]}
-                        onPress={handleDownload}
-                        disabled={isDownloading}
+                        style={[styles.secondaryBtn, isRepeat && styles.secondaryBtnOn]}
+                        onPress={() => {
+                            const next = !isRepeat;
+                            setIsRepeat(next);
+                            TrackPlayer.setRepeatMode(next ? RepeatMode.Track : RepeatMode.Off);
+                        }}
                     >
                         <MaterialIcons
-                            name={isDownloading ? 'hourglass-empty' : 'file-download'}
+                            name="repeat"
+                            size={20}
+                            color={isRepeat ? '#66cc33' : 'rgba(255,255,255,0.6)'}
+                        />
+                    </TouchableOpacity>
+
+                    {/* Download — gated by subscription */}
+                    <TouchableOpacity
+                        style={[styles.secondaryBtn, !canDownload && styles.secondaryBtnDisabled]}
+                        onPress={handleDownload}
+                    >
+                        <MaterialIcons
+                            name="file-download"
                             size={20}
                             color={canDownload ? '#66cc33' : 'rgba(255,255,255,0.25)'}
                         />
                     </TouchableOpacity>
 
-                    {/* Share button */}
+                    {/* Share */}
                     <TouchableOpacity style={styles.secondaryBtn} onPress={handleShare}>
                         <MaterialIcons name="share" size={20} color="rgba(255,255,255,0.65)" />
                     </TouchableOpacity>
 
-                    <TouchableOpacity style={styles.secondaryBtn}>
-                        <MaterialIcons name="playlist-add" size={22} color="rgba(255,255,255,0.65)" />
-                    </TouchableOpacity>
+                    {/* Create Reel — only when audio exists */}
+                    {hasAudio && (
+                        <TouchableOpacity
+                            style={[styles.secondaryBtn, styles.reelBtn]}
+                            onPress={() => setReelModalVisible(true)}
+                        >
+                            <MaterialIcons name="content-cut" size={18} color="#66cc33" />
+                        </TouchableOpacity>
+                    )}
                 </View>
 
                 {/* Download limit note */}
@@ -418,6 +534,75 @@ const SongDetailScreen = () => {
                         </Text>
                         <MaterialIcons name="chevron-right" size={13} color="#FBBF24" />
                     </TouchableOpacity>
+                )}
+
+                {/* Reel Card */}
+                {currentSong.reelPath && (
+                    <View style={[styles.reelCard, activeTrack === 'reel' && styles.reelCardActive]}>
+                        {/* Header row */}
+                        <View style={styles.reelCardHeader}>
+                            {/* Play / Pause button */}
+                            <TouchableOpacity onPress={handleReelPlay} activeOpacity={0.85} style={styles.reelPlayBtn}>
+                                <LinearGradient
+                                    colors={['#66cc33', '#047ec9']}
+                                    start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                                    style={StyleSheet.absoluteFill}
+                                />
+                                <FontAwesome
+                                    name={activeTrack === 'reel' && isPlaying ? 'pause' : 'play'}
+                                    size={14}
+                                    color="#fff"
+                                    style={{ marginLeft: activeTrack === 'reel' && isPlaying ? 0 : 2 }}
+                                />
+                            </TouchableOpacity>
+
+                            {/* Info */}
+                            <View style={{ flex: 1 }}>
+                                <View style={styles.reelTitleRow}>
+                                    <Text style={styles.reelCardTitle}>My Reel</Text>
+                                    {activeTrack === 'reel' && (
+                                        <View style={styles.reelNowPlayingBadge}>
+                                            <MaterialIcons name="graphic-eq" size={10} color="#66cc33" />
+                                            <Text style={styles.reelNowPlayingText}>NOW PLAYING</Text>
+                                        </View>
+                                    )}
+                                </View>
+                                <Text style={styles.reelCardSub}>
+                                    {currentSong.reelDuration}s clip · {fmt(currentSong.reelStartTime ?? 0)} → {fmt((currentSong.reelStartTime ?? 0) + (currentSong.reelDuration ?? 30))}
+                                </Text>
+                            </View>
+
+                            {/* Edit button */}
+                            <TouchableOpacity style={styles.reelEditBtn} onPress={() => setReelModalVisible(true)}>
+                                <MaterialIcons name="edit" size={14} color="rgba(255,255,255,0.5)" />
+                                <Text style={styles.reelEditText}>Edit</Text>
+                            </TouchableOpacity>
+                        </View>
+
+                        {/* Mini timeline showing clip position within full song */}
+                        <View style={styles.reelTimeline}>
+                            <View style={styles.reelTimelineBg} />
+                            <View
+                                style={[
+                                    styles.reelTimelineWindow,
+                                    {
+                                        left: fullSongDuration > 0
+                                            ? `${((currentSong.reelStartTime ?? 0) / fullSongDuration) * 100}%`
+                                            : '0%',
+                                        width: fullSongDuration > 0
+                                            ? `${((currentSong.reelDuration ?? 30) / fullSongDuration) * 100}%`
+                                            : '25%',
+                                    },
+                                ]}
+                            />
+                        </View>
+                        <View style={styles.reelTimeLabels}>
+                            <Text style={styles.reelTimeLabel}>{fmt(currentSong.reelStartTime ?? 0)}</Text>
+                            <Text style={styles.reelTimeLabel}>
+                                {fmt((currentSong.reelStartTime ?? 0) + (currentSong.reelDuration ?? 30))}
+                            </Text>
+                        </View>
+                    </View>
                 )}
 
                 {/* Info Card */}
@@ -447,8 +632,22 @@ const SongDetailScreen = () => {
             <UpgradePromptModal
                 visible={upgradeModalVisible}
                 onClose={() => setUpgradeModalVisible(false)}
-                currentPlanName={plan?.name ?? 'Harmony'}
+                currentPlanName={plan?.name ?? 'Spark'}
                 blockedFeature="Downloading songs"
+            />
+
+            <ReelCreatorModal
+                visible={reelModalVisible}
+                onClose={() => setReelModalVisible(false)}
+                song={{ ...currentSong, duration: fullSongDuration }}
+                onReelCreated={(updatedSong) => setCurrentSong(updatedSong)}
+            />
+
+            <DownloadSheet
+                visible={downloadSheetVisible}
+                onClose={() => setDownloadSheetVisible(false)}
+                song={currentSong}
+                onDownloadComplete={refreshAll}
             />
         </View>
     );
@@ -527,6 +726,10 @@ const styles = StyleSheet.create({
         width: 14, height: 14, borderRadius: 7, backgroundColor: '#fff', marginRight: -7,
         shadowColor: '#66cc33', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 1, shadowRadius: 6, elevation: 6,
     },
+    progressThumbActive: {
+        width: 20, height: 20, borderRadius: 10, marginRight: -10,
+        shadowRadius: 10,
+    },
     timeRow: { flexDirection: 'row', justifyContent: 'space-between' },
     timeText: { color: 'rgba(255,255,255,0.45)', fontSize: 12, fontFamily: 'Oswald-Regular' },
 
@@ -554,6 +757,8 @@ const styles = StyleSheet.create({
         borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)',
     },
     speedText: { color: 'rgba(255,255,255,0.7)', fontFamily: 'Oswald-Bold', fontSize: 12, letterSpacing: 0.5 },
+    speedTextActive: { color: '#66cc33' },
+    secondaryBtnOn: { borderColor: 'rgba(102,204,51,0.4)', backgroundColor: 'rgba(102,204,51,0.1)' },
 
     infoCard: {
         backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 20,
@@ -570,6 +775,53 @@ const styles = StyleSheet.create({
     infoValue: { color: '#fff', fontSize: 14, fontFamily: 'Oswald-Regular', marginTop: 2 },
 
     secondaryBtnDisabled: { opacity: 0.45 },
+    reelBtn: { borderColor: 'rgba(102,204,51,0.35)', backgroundColor: 'rgba(102,204,51,0.08)' },
+
+    reelCard: {
+        backgroundColor: 'rgba(102,204,51,0.07)',
+        borderRadius: 18,
+        padding: 16,
+        marginBottom: 16,
+        borderWidth: 1,
+        borderColor: 'rgba(102,204,51,0.2)',
+    },
+    reelCardActive: {
+        borderColor: '#66cc33',
+        backgroundColor: 'rgba(102,204,51,0.12)',
+    },
+    reelCardHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 14 },
+    reelPlayBtn: {
+        width: 42, height: 42, borderRadius: 21,
+        justifyContent: 'center', alignItems: 'center',
+        overflow: 'hidden',
+        shadowColor: '#66cc33', shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.4, shadowRadius: 8, elevation: 6,
+    },
+    reelTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 2 },
+    reelCardTitle: { color: '#fff', fontFamily: 'Oswald-Bold', fontSize: 14 },
+    reelNowPlayingBadge: {
+        flexDirection: 'row', alignItems: 'center', gap: 3,
+        backgroundColor: 'rgba(102,204,51,0.15)',
+        borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2,
+        borderWidth: 1, borderColor: 'rgba(102,204,51,0.3)',
+    },
+    reelNowPlayingText: { color: '#66cc33', fontFamily: 'Oswald-Bold', fontSize: 8, letterSpacing: 1 },
+    reelCardSub: { color: 'rgba(255,255,255,0.45)', fontFamily: 'Oswald-Regular', fontSize: 11 },
+    reelEditBtn: {
+        flexDirection: 'row', alignItems: 'center', gap: 4,
+        backgroundColor: 'rgba(255,255,255,0.07)',
+        borderRadius: 10, paddingHorizontal: 10, paddingVertical: 6,
+        borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)',
+    },
+    reelEditText: { color: 'rgba(255,255,255,0.5)', fontFamily: 'Oswald-Regular', fontSize: 11 },
+    reelTimeline: { height: 8, borderRadius: 4, overflow: 'hidden', position: 'relative', marginBottom: 6 },
+    reelTimelineBg: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 4 },
+    reelTimelineWindow: {
+        position: 'absolute', top: 0, bottom: 0, borderRadius: 4,
+        backgroundColor: '#66cc33', opacity: 0.75,
+    },
+    reelTimeLabels: { flexDirection: 'row', justifyContent: 'space-between' },
+    reelTimeLabel: { color: 'rgba(255,255,255,0.35)', fontFamily: 'Oswald-Regular', fontSize: 10 },
     downloadLimitNote: {
         flexDirection: 'row',
         alignItems: 'center',

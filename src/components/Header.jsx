@@ -82,7 +82,7 @@ const Header = () => {
                     />
                 </View>
 
-                {/* Right — token balance pill */}
+                {/* Right — song credit pill */}
                 <TouchableOpacity
                     style={[styles.side, styles.sideRight]}
                     onPress={() => setDrawerVisible(true)}
@@ -102,7 +102,7 @@ const Header = () => {
                             />
                         </View>
                         <Text style={[styles.tokenText, { color: tokenColor }]}>
-                            {tokenBalance}
+                            {(tokenBalance / 100).toFixed(1).replace(/\.0$/, '')} cr
                         </Text>
                         <MaterialIcons name="bolt" size={13} color={tokenColor} />
                     </View>

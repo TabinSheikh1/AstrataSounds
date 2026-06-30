@@ -16,12 +16,12 @@ import LinearGradient from 'react-native-linear-gradient';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSelector } from 'react-redux';
-import { getMySongs } from '../api/songsService';
+import { getAllSongs, getMySongs } from '../api/songsService';
 import { getMyPlaylists } from '../api/playlistsService';
 import Header from './Header';
+import { SERVER_URL as FILE_BASE } from '../config/api';
 
 const { width } = Dimensions.get('window');
-const FILE_BASE = 'http://localhost:3000';
 
 const formatCount = (n) => {
   if (!n) return '0';
@@ -64,14 +64,18 @@ const SectionHeader = ({ title, onSeeAll }) => (
   </View>
 );
 
-const SongCard = ({ item, onPress }) => {
-  const imageUri = item.imagePath
-    ? { uri: `${FILE_BASE}${item.imagePath}` }
-    : require('../assets/images/play.png');
-
-  return (
-    <TouchableOpacity style={s.songCard} onPress={onPress} activeOpacity={0.88}>
-      <Image source={imageUri} style={s.songCover} />
+const SongCard = ({ item, onPress }) => (
+  <TouchableOpacity style={s.songCard} onPress={onPress} activeOpacity={0.88}>
+    {item.imagePath ? (
+      <Image source={{ uri: `${FILE_BASE}${item.imagePath}` }} style={s.songCover} />
+    ) : (
+      <LinearGradient
+        colors={['#0d1b2a', '#1b2838', '#0d2137']}
+        style={[s.songCover, s.noImageWrap]}
+      >
+        <MaterialIcons name="music-note" size={42} color="rgba(102,204,51,0.35)" />
+      </LinearGradient>
+    )}
       {item.genre ? (
         <View style={s.genreTag}>
           <Text style={s.genreTagText}>{item.genre.toUpperCase()}</Text>
@@ -96,18 +100,22 @@ const SongCard = ({ item, onPress }) => {
         </View>
       </LinearGradient>
     </TouchableOpacity>
-  );
-};
+);
 
 const PlaylistCard = ({ item }) => {
-  const imageUri = item.bannerUrl
-    ? { uri: `${FILE_BASE}${item.bannerUrl}` }
-    : require('../assets/images/Rectangle-9560.png');
   const count = item.songs?.length ?? 0;
-
   return (
     <TouchableOpacity style={s.playlistCard} activeOpacity={0.88}>
-      <Image source={imageUri} style={s.playlistCover} />
+      {item.bannerUrl ? (
+        <Image source={{ uri: `${FILE_BASE}${item.bannerUrl}` }} style={s.playlistCover} />
+      ) : (
+        <LinearGradient
+          colors={['#0d1b2a', '#16213e', '#0f3460']}
+          style={[s.playlistCover, s.noImageWrap]}
+        >
+          <MaterialIcons name="library-music" size={28} color="rgba(4,126,201,0.5)" />
+        </LinearGradient>
+      )}
       <View style={s.playlistBadge}>
         <MaterialIcons name="music-note" size={10} color="#fff" />
         <Text style={s.playlistBadgeText}>{count}</Text>
@@ -157,6 +165,7 @@ const HomeScreen = () => {
 
   const [songs, setSongs] = useState([]);
   const [playlists, setPlaylists] = useState([]);
+  const [mySongsCount, setMySongsCount] = useState(0);
   const [songsLoading, setSongsLoading] = useState(false);
   const [playlistsLoading, setPlaylistsLoading] = useState(false);
 
@@ -166,12 +175,15 @@ const HomeScreen = () => {
     setSongsLoading(true);
     setPlaylistsLoading(true);
     try {
-      const [songsRes, playlistsRes] = await Promise.all([
-        getMySongs().catch(() => ({})),
+      const [songsRes, playlistsRes, mySongsRes] = await Promise.all([
+        getAllSongs().catch(() => ({})),
         getMyPlaylists().catch(() => ({})),
+        getMySongs().catch(() => ({})),
       ]);
       setSongs(Array.isArray(songsRes) ? songsRes : (songsRes?.data ?? []));
       setPlaylists(Array.isArray(playlistsRes) ? playlistsRes : (playlistsRes?.data ?? []));
+      const mySongsList = Array.isArray(mySongsRes) ? mySongsRes : (mySongsRes?.data ?? []);
+      setMySongsCount(mySongsList.length);
     } finally {
       setSongsLoading(false);
       setPlaylistsLoading(false);
@@ -223,7 +235,7 @@ const HomeScreen = () => {
 
             <View style={s.heroFooter}>
               <View style={s.heroStats}>
-                <HeroStat label="Songs" value={songs.length} loading={songsLoading} />
+                <HeroStat label="My Songs" value={mySongsCount} loading={songsLoading} />
                 <View style={s.heroStatSep} />
                 <HeroStat label="Playlists" value={playlists.length} loading={playlistsLoading} />
               </View>
@@ -273,7 +285,7 @@ const HomeScreen = () => {
 
         {/* ── Recent Songs ──────────────────────────────── */}
         <SectionHeader
-          title="Recent Songs"
+          title="Discover Songs"
           onSeeAll={() => navigation.navigate('HomeSongsScreen')}
         />
 
@@ -557,6 +569,10 @@ const s = StyleSheet.create({
     width: '100%',
     height: '100%',
     position: 'absolute',
+  },
+  noImageWrap: {
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   genreTag: {
     position: 'absolute',

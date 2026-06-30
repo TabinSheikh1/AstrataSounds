@@ -50,6 +50,12 @@ export const CATEGORIES = [
 
 export const TABS = ['Lyrics', 'Cover', 'Generate'];
 
+export const LANGUAGES = [
+    { value: 'english', label: 'English', native: 'English', flag: '🇺🇸' },
+    { value: 'spanish', label: 'Spanish', native: 'Español', flag: '🇪🇸' },
+    { value: 'french',  label: 'French',  native: 'Français', flag: '🇫🇷' },
+];
+
 export const MOODS = [
     // Positive / Upbeat
     { value: 'happy',        label: 'Happy',        emoji: '😊', color: '#FFD700' },

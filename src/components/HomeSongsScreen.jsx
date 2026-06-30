@@ -7,10 +7,10 @@ import {
     Image,
     TouchableOpacity,
     Dimensions,
-    ImageBackground,
     Animated,
     ActivityIndicator,
     StatusBar,
+    ImageBackground
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -20,20 +20,9 @@ import { getMyPlaylists } from '../api/playlistsService';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
 const { width } = Dimensions.get('window');
-const FILE_BASE = 'http://localhost:3000';
-const MAIN_TABS = ['Songs', 'Playlists', 'Genres'];
-const TAB_W = (width - 48) / 3;
-
-const genres = [
-    { id: '1', tag: 'POP',  image: require('../assets/images/Rectangle-9560.png'), color: '#e91e8c' },
-    { id: '2', tag: 'R&B',  image: require('../assets/images/Rectangle-9561.png'), color: '#9c27b0' },
-    { id: '3', tag: 'HIP-HOP', image: require('../assets/images/Rectangle-9562.png'), color: '#ff5722' },
-    { id: '4', tag: 'JAZZ', image: require('../assets/images/Rectangle-9563.png'), color: '#047ec9' },
-    { id: '5', tag: 'EDM',  image: require('../assets/images/Rectangle-9564.png'), color: '#66cc33' },
-    { id: '6', tag: 'ROCK', image: require('../assets/images/Rectangle-9560.png'), color: '#f44336' },
-    { id: '7', tag: 'SOUL', image: require('../assets/images/Rectangle-9561.png'), color: '#ff9800' },
-    { id: '8', tag: 'LATIN',image: require('../assets/images/Rectangle-9562.png'), color: '#4caf50' },
-];
+import { SERVER_URL as FILE_BASE } from '../config/api';
+const MAIN_TABS = ['Songs', 'Playlists'];
+const TAB_W = (width - 48) / 2;
 
 const formatCount = (n) => {
     if (!n) return '0';
@@ -43,16 +32,20 @@ const formatCount = (n) => {
 };
 
 // ── Song card ──────────────────────────────────────────────────
-const SongCard = ({ item, likeData, onPress, onLike }) => {
-    const imageUri = item.imagePath
-        ? { uri: `${FILE_BASE}${item.imagePath}` }
-        : require('../assets/images/Rectangle-9560.png');
-
-    return (
-        <View style={s.songCard}>
-            <TouchableOpacity onPress={onPress} activeOpacity={0.88}>
-                <View style={s.songThumbWrap}>
-                    <Image source={imageUri} style={s.songImage} />
+const SongCard = ({ item, likeData, onPress, onLike }) => (
+    <View style={s.songCard}>
+        <TouchableOpacity onPress={onPress} activeOpacity={0.88}>
+            <View style={s.songThumbWrap}>
+                {item.imagePath ? (
+                    <Image key={item.imagePath} source={{ uri: `${FILE_BASE}${item.imagePath}` }} style={s.songImage} resizeMode="cover" />
+                ) : (
+                    <LinearGradient
+                        colors={['#0d1b2a', '#1b2838', '#0d2137']}
+                        style={[s.songImage, s.noImageWrap]}
+                    >
+                        <MaterialIcons name="music-note" size={32} color="rgba(102,204,51,0.35)" />
+                    </LinearGradient>
+                )}
                     <View style={s.songPlayBadge}>
                         <MaterialIcons name="play-arrow" size={16} color="#fff" />
                     </View>
@@ -88,19 +81,23 @@ const SongCard = ({ item, likeData, onPress, onLike }) => {
                 </View>
             </View>
         </View>
-    );
-};
+);
 
 // ── Playlist card ──────────────────────────────────────────────
 const PlaylistCard = ({ item }) => {
-    const imageUri = item.bannerUrl
-        ? { uri: `${FILE_BASE}${item.bannerUrl}` }
-        : require('../assets/images/Rectangle-9560.png');
     const count = item.songs?.length ?? 0;
-
     return (
         <TouchableOpacity style={s.playlistCard} activeOpacity={0.88}>
-            <Image source={imageUri} style={s.playlistCover} />
+            {item.bannerImage ? (
+                <Image key={item.bannerImage} source={{ uri: `${FILE_BASE}${item.bannerImage}` }} style={s.playlistCover} resizeMode="cover" />
+            ) : (
+                <LinearGradient
+                    colors={['#0d1b2a', '#16213e', '#0f3460']}
+                    style={[s.playlistCover, s.noImageWrap]}
+                >
+                    <MaterialIcons name="library-music" size={32} color="rgba(4,126,201,0.5)" />
+                </LinearGradient>
+            )}
             <View style={s.playlistCountBadge}>
                 <MaterialIcons name="music-note" size={9} color="#fff" />
                 <Text style={s.playlistCountText}>{count}</Text>
@@ -115,26 +112,6 @@ const PlaylistCard = ({ item }) => {
         </TouchableOpacity>
     );
 };
-
-// ── Genre card ─────────────────────────────────────────────────
-const GenreCard = ({ item }) => (
-    <TouchableOpacity style={s.genreCard} activeOpacity={0.88}>
-        <ImageBackground
-            source={item.image}
-            style={s.genreInner}
-            imageStyle={s.genreImageStyle}
-        >
-            <LinearGradient
-                colors={['rgba(0,0,0,0.25)', 'transparent', 'rgba(0,0,0,0.75)']}
-                style={s.genreOverlay}
-            >
-                <View style={[s.genreTagPill, { backgroundColor: item.color }]}>
-                    <Text style={s.genreTagText}>{item.tag}</Text>
-                </View>
-            </LinearGradient>
-        </ImageBackground>
-    </TouchableOpacity>
-);
 
 // ── Loader / Empty ─────────────────────────────────────────────
 const Loader = () => (
@@ -258,19 +235,6 @@ const HomeSongsScreen = () => {
             );
         }
 
-        if (selectedTab === 'Genres') {
-            return (
-                <FlatList
-                    key="genres"
-                    data={genres}
-                    renderItem={({ item }) => <GenreCard item={item} />}
-                    keyExtractor={(item) => item.id}
-                    numColumns={2}
-                    contentContainerStyle={s.gridList}
-                    showsVerticalScrollIndicator={false}
-                />
-            );
-        }
     };
 
     return (
@@ -303,8 +267,8 @@ const HomeSongsScreen = () => {
                                     width: TAB_W,
                                     transform: [{
                                         translateX: tabIndicator.interpolate({
-                                            inputRange: [0, 1, 2],
-                                            outputRange: [2, TAB_W + 2, TAB_W * 2 + 2],
+                                            inputRange: [0, 1],
+                                            outputRange: [2, TAB_W + 2],
                                         }),
                                     }],
                                 },
@@ -334,8 +298,6 @@ const HomeSongsScreen = () => {
 export default HomeSongsScreen;
 
 // ── Styles ─────────────────────────────────────────────────────
-const PLAYLIST_CARD_W = (width - 48) / 2;
-const GENRE_CARD_W = (width - 48) / 2;
 
 const s = StyleSheet.create({
     background: { flex: 1, width: '100%', height: '100%' },
@@ -400,6 +362,12 @@ const s = StyleSheet.create({
         paddingTop: 6,
         paddingBottom: 110,
         gap: 10,
+    },
+
+    // ── No-image placeholder ───────────────────────────────────
+    noImageWrap: {
+        justifyContent: 'center',
+        alignItems: 'center',
     },
 
     // ── Song card ──────────────────────────────────────────────
@@ -542,41 +510,6 @@ const s = StyleSheet.create({
         color: 'rgba(255,255,255,0.6)',
         fontSize: 11,
         fontFamily: 'Oswald-Regular',
-    },
-
-    // ── Genre card ─────────────────────────────────────────────
-    genreCard: {
-        flex: 1,
-        margin: 6,
-        height: 155,
-        borderRadius: 16,
-        overflow: 'hidden',
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.12)',
-    },
-    genreInner: {
-        flex: 1,
-        justifyContent: 'flex-end',
-    },
-    genreImageStyle: {
-        borderRadius: 16,
-    },
-    genreOverlay: {
-        flex: 1,
-        justifyContent: 'flex-end',
-        padding: 12,
-    },
-    genreTagPill: {
-        alignSelf: 'flex-start',
-        borderRadius: 8,
-        paddingHorizontal: 10,
-        paddingVertical: 5,
-    },
-    genreTagText: {
-        color: '#fff',
-        fontSize: 12,
-        fontFamily: 'Oswald-Bold',
-        letterSpacing: 1.2,
     },
 
     // ── Loader / Empty ─────────────────────────────────────────

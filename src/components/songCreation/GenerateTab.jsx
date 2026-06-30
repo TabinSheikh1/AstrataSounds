@@ -1,15 +1,16 @@
 import React from 'react';
 import {
-    View, Text, ScrollView, TextInput,
+    View, Text, ScrollView, TextInput, TouchableOpacity,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import { MOODS, CATEGORIES } from './constants';
+import { MOODS, CATEGORIES, LANGUAGES } from './constants';
 import { styles } from './songCreationStyles';
 import SectionLabel from './SectionLabel';
 import GlassBox from './GlassBox';
 import CreateButton from './CreateButton';
 
+// ── Main tab ───────────────────────────────────────────────────
 const GenerateTab = ({
     selectedMood,
     selectedCategory,
@@ -22,13 +23,16 @@ const GenerateTab = ({
     uploadedImage,
     imagePrompt,
     instrumental,
+    selectedLanguage,
     titleText, setTitleText,
     description, setDescription,
+    totalBalance,
     handleGenerate, generating, btnScale,
 }) => {
     const moodObj  = MOODS.find((m) => m.value === selectedMood);
     const catObj   = CATEGORIES.find((c) => c.value === selectedCategory);
     const vibeObj  = vibes.find((v) => v.id === selectedVibeId);
+    const langObj  = LANGUAGES.find((l) => l.value === selectedLanguage) ?? LANGUAGES[0];
 
     const summaryRows = [
         {
@@ -67,9 +71,16 @@ const GenerateTab = ({
             value: instrumental ? 'Instrumental only' : 'With vocals',
             done: true,
         },
+        {
+            icon: 'language',
+            label: 'Language',
+            value: `${langObj.flag} ${langObj.label} (${langObj.native})`,
+            done: true,
+        },
     ];
 
     const completedCount = summaryRows.filter(r => r.done).length;
+    const canAffordSelected = totalBalance >= 100;
 
     return (
         <ScrollView
@@ -123,6 +134,24 @@ const GenerateTab = ({
                 />
                 <Text style={styles.charCount}>{description.length} / 300</Text>
             </GlassBox>
+
+            {/* Credit balance indicator */}
+            <View style={styles.creditBalanceRow}>
+                <MaterialIcons
+                    name={canAffordSelected ? 'check-circle' : 'warning'}
+                    size={13}
+                    color={canAffordSelected ? '#66cc33' : '#FBBF24'}
+                />
+                <Text style={[
+                    styles.creditBalanceText,
+                    { color: canAffordSelected ? 'rgba(255,255,255,0.5)' : '#FBBF24' },
+                ]}>
+                    {canAffordSelected
+                        ? `Balance: ${(totalBalance / 100).toFixed(2)} credits · 1 credit required`
+                        : `Not enough credits — need 1 credit, have ${(totalBalance / 100).toFixed(2)}`
+                    }
+                </Text>
+            </View>
 
             {/* Summary */}
             <SectionLabel icon="summarize" title="Configuration Summary" />
