@@ -14,7 +14,7 @@ import {
   getPlans,
 } from '../api/subscriptionsService';
 
-const TOKEN_COST_PER_SONG = 70;
+const TOKEN_COST_FULL_SONG = 100; // full song costs 100 tokens; 30s reel = 50; 15s reel = 25
 
 export const useSubscription = () => {
   const dispatch = useDispatch();
@@ -62,10 +62,10 @@ export const useSubscription = () => {
   const status = subscription?.status ?? 'free';
 
   const tokenBalance = tokens?.balance ?? 0;
-  const tokenGranted = tokens?.granted ?? 500;
+  const tokenGranted = tokens?.grantedThisPeriod ?? 0;          // API field is grantedThisPeriod
   const purchasedBalance = tokens?.purchasedBalance ?? 0;
   const totalBalance = tokens?.totalBalance ?? tokenBalance + purchasedBalance;
-  const downloadsUsed = tokens?.downloadsUsedThisPeriod ?? 0;
+  const downloadsUsed = subscription?.downloadsUsedThisPeriod ?? 0; // lives on subscription, not tokens
 
   const downloadLimit = plan?.monthlyDownloadLimit ?? 5;
   const maxVibes = plan?.maxVibes ?? 5;
@@ -76,7 +76,7 @@ export const useSubscription = () => {
   const isBlocked = status === 'canceled' || status === 'unpaid';
 
   const canGenerate =
-    !isBlocked && totalBalance >= TOKEN_COST_PER_SONG;
+    !isBlocked && totalBalance >= TOKEN_COST_FULL_SONG;
 
   const canDownload =
     !isBlocked &&

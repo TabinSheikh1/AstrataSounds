@@ -24,11 +24,16 @@ const fmt = (iso) => {
   });
 };
 
+// Keys match backend TokenTransactionType enum values
 const TYPE_LABELS = {
-  grant: 'Monthly Grant',
-  bonus: 'Bonus Tokens',
-  debit: 'Song Generation',
-  purchase: 'Token Purchase',
+  credit_subscription:  'Monthly Credits',
+  credit_bonus:         'Bonus Credits',
+  credit_purchase:      'Credit Pack Purchase',
+  credit_referral:      'Referral Bonus',
+  debit_song_generation:'Full Song Generated',
+  debit_reel_generation:'Reel Generated',
+  debit_adjustment:     'Adjustment',
+  credit_refund:        'Refund',
 };
 
 const TransactionRow = ({ item }) => {
@@ -55,13 +60,15 @@ const TransactionRow = ({ item }) => {
       </View>
       <View style={styles.txAmountWrap}>
         <Text style={[styles.txAmount, { color: isCredit ? '#66cc33' : '#EF4444' }]}>
-          {isCredit ? '+' : ''}{item.amount}
+          {isCredit ? '+' : '-'}{toCredits(Math.abs(item.amount))} cr
         </Text>
-        <Text style={styles.txBalance}>bal: {item.balanceAfter ?? '—'}</Text>
+        <Text style={styles.txBalance}>bal: {toCredits(item.balanceAfter ?? 0)} cr</Text>
       </View>
     </View>
   );
 };
+
+const toCredits = (t) => (t / 100).toFixed(1).replace(/\.0$/, '');
 
 const TokenHistoryDrawer = ({ visible, onClose }) => {
   const { tokenBalance, tokenGranted, tokenColor, tokenPct, tokens } = useSubscription();
@@ -124,7 +131,7 @@ const TokenHistoryDrawer = ({ visible, onClose }) => {
 
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>Token Balance</Text>
+          <Text style={styles.title}>Song Credits</Text>
           <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
             <MaterialIcons name="close" size={22} color="rgba(255,255,255,0.5)" />
           </TouchableOpacity>
@@ -139,12 +146,14 @@ const TokenHistoryDrawer = ({ visible, onClose }) => {
             <View>
               <Text style={styles.balanceLabel}>REMAINING</Text>
               <Text style={[styles.balanceValue, { color: tokenColor }]}>
-                {tokenBalance}
+                {toCredits(tokenBalance)}
               </Text>
-              <Text style={styles.balanceOf}>of {tokenGranted} tokens</Text>
+              <Text style={styles.balanceOf}>of {toCredits(tokenGranted)} credits this period</Text>
             </View>
             <View style={styles.balanceRight}>
-              <Text style={styles.costNote}>70 tokens / song</Text>
+              <Text style={styles.costNote}>1 cr · full song</Text>
+              <Text style={[styles.costNote, { marginTop: 2 }]}>0.5 cr · 30s reel</Text>
+              <Text style={[styles.costNote, { marginTop: 2 }]}>0.25 cr · 15s reel</Text>
               {periodEnd && (
                 <Text style={styles.resetNote}>Resets {periodEnd}</Text>
               )}

@@ -19,8 +19,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { updateProfile, uploadProfilePicture } from '../api/userService';
 import { updateUser } from '../store/slices/authSlice';
-
-const BASE_URL = 'http://localhost:3000';
+import { SERVER_URL as BASE_URL } from '../config/api';
 
 const GENDER_OPTIONS = ['Male', 'Female', 'Non-binary', 'Prefer not to say'];
 
