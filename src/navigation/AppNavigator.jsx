@@ -67,7 +67,7 @@ const AppNavigator = () => {
   const { isAuthenticated } = useSelector((state) => state.auth);
   const { refreshAll, fetchPlans } = useSubscription();
   const [showSplash, setShowSplash] = useState(true);
-  const [showReview, setShowReview] = useState(true);
+  const [showReview, setShowReview] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => {
