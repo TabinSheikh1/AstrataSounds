@@ -12,8 +12,8 @@ import {
   Modal,
   TouchableWithoutFeedback,
   Linking,
+  ImageBackground,
 } from 'react-native';
-import LinearGradient from 'react-native-linear-gradient';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useCallback } from 'react';
@@ -24,6 +24,7 @@ import {
   openBillingPortal,
   creditPackCheckout,
 } from '../api/subscriptionsService';
+import { getErrorMessage } from '../utils/errorHandler';
 
 const STATUS_CONFIG = {
   active: { label: 'Active', color: '#66cc33', bg: 'rgba(102,204,51,0.12)' },
@@ -194,7 +195,7 @@ const BillingScreen = () => {
       setCancelModalVisible(false);
       Alert.alert('Subscription Canceled', `Your subscription will end on ${periodEndFmt}.`);
     } catch (e) {
-      Alert.alert('Error', e?.response?.data?.message ?? 'Could not cancel. Please try again.');
+      Alert.alert('Error', getErrorMessage(e, 'Could not cancel. Please try again.'));
     } finally {
       setActionLoading(false);
     }
@@ -207,7 +208,7 @@ const BillingScreen = () => {
       await refreshAll();
       Alert.alert('Reactivated', 'Your subscription has been reactivated.');
     } catch (e) {
-      Alert.alert('Error', e?.response?.data?.message ?? 'Could not reactivate. Please try again.');
+      Alert.alert('Error', getErrorMessage(e, 'Could not reactivate. Please try again.'));
     } finally {
       setActionLoading(false);
     }
@@ -229,7 +230,7 @@ const BillingScreen = () => {
         Alert.alert('Error', 'Could not open checkout. Please try again.');
       }
     } catch (e) {
-      Alert.alert('Error', e?.response?.data?.message ?? 'Could not start purchase. Please try again.');
+      Alert.alert('Error', getErrorMessage(e, 'Could not start purchase. Please try again.'));
     } finally {
       setBuyTokensLoading(false);
     }
@@ -246,18 +247,17 @@ const BillingScreen = () => {
         Alert.alert('Error', 'Could not open billing portal.');
       }
     } catch (e) {
-      Alert.alert('Error', e?.response?.data?.message ?? 'Could not open billing portal.');
+      Alert.alert('Error', getErrorMessage(e, 'Could not open billing portal.'));
     } finally {
       setPortalLoading(false);
     }
   };
 
   return (
-    <LinearGradient
-      colors={['#0066CC', 'rgba(0,153,153,1)', '#66cc33']}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 0.3, y: 1 }}
+    <ImageBackground
+      source={require('../assets/images/image-1.jpg')}
       style={styles.root}
+      resizeMode="cover"
     >
       <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
 
@@ -343,8 +343,7 @@ const BillingScreen = () => {
               </View>
               <View style={{ alignItems: 'flex-end' }}>
                 <Text style={styles.tokenCost}>Full song · 1 credit</Text>
-                <Text style={[styles.tokenCost, { marginTop: 2 }]}>30s reel · 0.5</Text>
-                <Text style={[styles.tokenCost, { marginTop: 2 }]}>15s reel · 0.25</Text>
+                <Text style={[styles.tokenCost, { marginTop: 2 }]}>Reel (15s or 30s) · 1 credit</Text>
               </View>
             </View>
             <View style={styles.barTrack}>
@@ -503,7 +502,7 @@ const BillingScreen = () => {
         onKeep={() => setCancelModalVisible(false)}
         loading={actionLoading}
       />
-    </LinearGradient>
+    </ImageBackground>
   );
 };
 

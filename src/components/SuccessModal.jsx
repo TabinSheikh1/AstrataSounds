@@ -9,10 +9,8 @@ import {
     Easing,
     Image,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
 
-const SuccessModal = ({ isVisible, onClose }) => {
-    const navigation = useNavigation();
+const SuccessModal = ({ isVisible, onClose, onDone }) => {
     const scaleAnim = useRef(new Animated.Value(0.7)).current;
     const opacityAnim = useRef(new Animated.Value(0)).current;
 
@@ -40,7 +38,7 @@ const SuccessModal = ({ isVisible, onClose }) => {
 
     const handleDone = () => {
         onClose();
-        navigation.navigate('LoginScreen');
+        onDone?.();
     };
 
     return (
@@ -48,7 +46,7 @@ const SuccessModal = ({ isVisible, onClose }) => {
             animationType="fade"
             transparent
             visible={isVisible}
-            onRequestClose={onClose}
+            onRequestClose={handleDone}
             statusBarTranslucent
         >
             <View style={styles.overlay}>
@@ -61,7 +59,7 @@ const SuccessModal = ({ isVisible, onClose }) => {
                         },
                     ]}
                 >
-                    <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+                    <TouchableOpacity style={styles.closeButton} onPress={handleDone}>
                         <Image
                             source={require('../assets/images/Cross.png')}
                             resizeMode="cover"

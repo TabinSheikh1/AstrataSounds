@@ -33,7 +33,7 @@ const FAQS = [
     items: [
       {
         q: 'How many songs do I get per month?',
-        a: 'Monthly song credits depend on your plan:\n• Spark (Free): 5 songs\n• Basic ($14.99/mo): 10 songs\n• Pro ($39.99/mo): 30 songs\n• Creator ($79.99/mo): 70 songs\n• Commercial ($149.99/mo): 150 songs\n\nFull songs cost 1 credit. A 30s reel costs 0.5 credits. A 15s reel costs 0.25 credits.',
+        a: 'Monthly song credits depend on your plan:\n• Spark (Free): 5 songs\n• Basic ($14.99/mo): 10 songs\n• Pro ($39.99/mo): 30 songs\n• Creator ($79.99/mo): 70 songs\n• Commercial ($149.99/mo): 150 songs\n\nFull songs and reels (15s or 30s) all cost 1 credit, regardless of length.',
       },
       {
         q: 'What happens when I run out of credits?',

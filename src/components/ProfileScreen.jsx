@@ -18,6 +18,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useDispatch, useSelector } from 'react-redux';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { updateProfile, uploadProfilePicture } from '../api/userService';
+import { getErrorMessage } from '../utils/errorHandler';
 import { updateUser } from '../store/slices/authSlice';
 import { SERVER_URL as BASE_URL } from '../config/api';
 
@@ -90,7 +91,7 @@ const ProfileScreen = () => {
       Alert.alert('Profile Updated', 'Your profile has been saved.');
       navigation.goBack();
     } catch (e) {
-      Alert.alert('Error', e?.response?.data?.message ?? 'Could not save profile. Please try again.');
+      Alert.alert('Error', getErrorMessage(e, 'Could not save profile. Please try again.'));
     } finally {
       setSaving(false);
     }

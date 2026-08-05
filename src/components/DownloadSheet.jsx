@@ -6,6 +6,7 @@ import {
 import LinearGradient from 'react-native-linear-gradient';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { downloadSongFile, downloadReelFile } from '../api/songsService';
+import { getErrorMessage } from '../utils/errorHandler';
 
 import { SERVER_URL as FILE_BASE } from '../config/api';
 
@@ -45,8 +46,7 @@ const DownloadSheet = ({ visible, onClose, song, onDownloadComplete }) => {
                 Alert.alert('Error', 'Cannot open the file URL.');
             }
         } catch (e) {
-            const msg = e?.response?.data?.message ?? e?.message ?? 'Download failed. Please try again.';
-            Alert.alert('Download Failed', msg);
+            Alert.alert('Download Failed', getErrorMessage(e, 'Download failed. Please try again.'));
         } finally {
             setDownloading(null);
         }

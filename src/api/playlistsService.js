@@ -1,7 +1,22 @@
 import API from "./axiosInstance";
 
+export const getAllPlaylists = async () => {
+  const response = await API.get("/playlists");
+  return response.data;
+};
+
 export const getMyPlaylists = async () => {
   const response = await API.get("/playlists/my");
+  return response.data;
+};
+
+export const getPlaylistById = async (id) => {
+  const response = await API.get(`/playlists/${id}`);
+  return response.data;
+};
+
+export const toggleLikePlaylist = async (id) => {
+  const response = await API.post(`/playlists/${id}/like`);
   return response.data;
 };
 

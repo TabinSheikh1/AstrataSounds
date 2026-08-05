@@ -4,6 +4,7 @@ import {
   authFailure,
   logout,
   clearAuthError,
+  triggerWelcomeModal,
 } from "../slices/authSlice";
 import {
   loginRequest,
@@ -14,25 +15,9 @@ import {
   resetPasswordRequest,
   resendOtpRequest,
 } from "../../api/authService";
+import { getErrorMessage } from "../../utils/errorHandler";
 
-// Normalizes any NestJS/Axios error into a plain string
-const extractMessage = (error, fallback) => {
-  const raw = error?.response?.data?.message ?? error?.message;
-  if (!raw) return fallback;
-  if (Array.isArray(raw)) {
-    return raw
-      .map((m) => {
-        if (typeof m === "string") return m;
-        // NestJS class-validator constraint object: { property, constraints: { rule: "message" } }
-        if (m?.constraints) return Object.values(m.constraints).join(", ");
-        if (m?.message) return m.message;
-        return JSON.stringify(m);
-      })
-      .join("\n");
-  }
-  if (typeof raw === "object") return error?.response?.data?.error ?? error?.message ?? fallback;
-  return raw;
-};
+const extractMessage = getErrorMessage;
 
 export const loginUser = (payload) => async (dispatch) => {
   try {
@@ -86,6 +71,10 @@ export const verifyEmailOtp = (payload) => async (dispatch) => {
       })
     );
 
+    // Email verification is a one-time event per account — this is always
+    // the moment the free Spark trial (500 tokens) gets provisioned.
+    dispatch(triggerWelcomeModal());
+
     return { success: true, data };
   } catch (error) {
     const message = extractMessage(error, "OTP verification failed");
@@ -110,19 +99,17 @@ export const forgotPassword = (payload) => async (dispatch) => {
   }
 };
 
+// Does not log the user in immediately — the reset-password screen shows a
+// success modal first, then dispatches loginSuccess once the user dismisses it
+// (see confirmPasswordReset below). Auto-logging in here would swap the app's
+// navigator out from under the modal before it could ever be seen.
 export const resetPassword = (payload) => async (dispatch) => {
   try {
     dispatch(authStart());
 
     const data = await resetPasswordRequest(payload);
 
-    dispatch(
-      loginSuccess({
-        user: data.user,
-        accessToken: data.tokens.accessToken,
-        refreshToken: data.tokens.refreshToken,
-      })
-    );
+    dispatch(clearAuthError());
 
     return { success: true, data };
   } catch (error) {
@@ -130,6 +117,16 @@ export const resetPassword = (payload) => async (dispatch) => {
     dispatch(authFailure(message));
     return { success: false, message };
   }
+};
+
+export const confirmPasswordReset = (data) => (dispatch) => {
+  dispatch(
+    loginSuccess({
+      user: data.user,
+      accessToken: data.tokens.accessToken,
+      refreshToken: data.tokens.refreshToken,
+    })
+  );
 };
 
 export const resendOtp = (payload) => async (dispatch) => {

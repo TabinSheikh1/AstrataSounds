@@ -6,6 +6,7 @@ import {
 import LinearGradient from 'react-native-linear-gradient';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { createReel } from '../api/songsService';
+import { getErrorMessage } from '../utils/errorHandler';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const TRACK_PADDING = 48;
@@ -94,8 +95,7 @@ const ReelCreatorModal = ({ visible, onClose, song, onReelCreated }) => {
             onReelCreated?.(res?.data ?? res);
             onClose();
         } catch (e) {
-            const msg = e?.response?.data?.message ?? 'Failed to create reel. Please try again.';
-            Alert.alert('Error', msg);
+            Alert.alert('Error', getErrorMessage(e, 'Failed to create reel. Please try again.'));
         } finally {
             setCreating(false);
         }

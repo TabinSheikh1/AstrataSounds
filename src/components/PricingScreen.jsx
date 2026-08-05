@@ -10,6 +10,7 @@ import {
   Platform,
   Alert,
   Linking,
+  ImageBackground,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
@@ -18,6 +19,7 @@ import { useSelector } from 'react-redux';
 import { useSubscription } from '../hooks/useSubscription';
 import CheckoutConfirmModal from './CheckoutConfirmModal';
 import { creditPackCheckout } from '../api/subscriptionsService';
+import { getErrorMessage } from '../utils/errorHandler';
 
 // ─── Plan display metadata ────────────────────────────────────────────────────
 
@@ -276,18 +278,17 @@ const PricingScreen = () => {
         Alert.alert('Error', 'Could not start checkout. Please try again.');
       }
     } catch (e) {
-      Alert.alert('Purchase Failed', e?.response?.data?.message ?? 'Something went wrong.');
+      Alert.alert('Purchase Failed', getErrorMessage(e, 'Something went wrong.'));
     } finally {
       setPackLoadingId(null);
     }
   };
 
   return (
-    <LinearGradient
-      colors={['#0066CC', 'rgba(0,153,153,1)', '#66cc33']}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 0.3, y: 1 }}
+    <ImageBackground
+      source={require('../assets/images/image-1.jpg')}
       style={styles.root}
+      resizeMode="cover"
     >
       <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
 
@@ -362,11 +363,7 @@ const PricingScreen = () => {
           </View>
           <View style={styles.costRow}>
             <MaterialIcons name="timer" size={14} color="rgba(255,255,255,0.6)" />
-            <Text style={styles.costText}>30s reel — 0.5 credits</Text>
-          </View>
-          <View style={styles.costRow}>
-            <MaterialIcons name="timer" size={14} color="rgba(255,255,255,0.6)" />
-            <Text style={styles.costText}>15s reel — 0.25 credits</Text>
+            <Text style={styles.costText}>Reel (15s or 30s) — 1 credit</Text>
           </View>
         </View>
 
@@ -399,7 +396,7 @@ const PricingScreen = () => {
         billingInterval={isYearly ? 'yearly' : 'monthly'}
         onClose={() => setCheckoutModal({ visible: false, plan: null })}
       />
-    </LinearGradient>
+    </ImageBackground>
   );
 };
 

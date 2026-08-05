@@ -99,6 +99,14 @@ const SignUpScreen = ({ navigation }) => {
             Alert.alert('Validation Error', 'Email is required');
             return false;
         }
+        if (!age.trim() || isNaN(parseInt(age, 10)) || parseInt(age, 10) < 1 || parseInt(age, 10) > 120) {
+            Alert.alert('Validation Error', 'Please enter a valid age (1-120)');
+            return false;
+        }
+        if (!gender) {
+            Alert.alert('Validation Error', 'Please select a gender');
+            return false;
+        }
         if (!password.trim()) {
             Alert.alert('Validation Error', 'Password is required');
             return false;
@@ -124,8 +132,8 @@ const SignUpScreen = ({ navigation }) => {
                 lastName: lastName.trim(),
                 email: email.trim().toLowerCase(),
                 password,
-                ...(age ? { age: parseInt(age, 10) } : {}),
-                ...(gender ? { gender } : {}),
+                age: parseInt(age, 10),
+                gender,
             })
         );
 

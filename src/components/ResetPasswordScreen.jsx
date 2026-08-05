@@ -18,7 +18,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import GradientBackground from './GradientBackground';
 import InputField from './InputField';
 import SuccessModal from './SuccessModal';
-import { resetPassword } from '../store/actions/authActions';
+import { resetPassword, confirmPasswordReset } from '../store/actions/authActions';
 
 const ResetPasswordScreen = ({ route }) => {
     const dispatch = useDispatch();
@@ -32,6 +32,7 @@ const ResetPasswordScreen = ({ route }) => {
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [modalVisible, setModalVisible] = useState(false);
     const [error, setError] = useState('');
+    const [pendingAuthData, setPendingAuthData] = useState(null);
 
     const headerOpacity = useRef(new Animated.Value(0)).current;
     const headerSlide = useRef(new Animated.Value(-30)).current;
@@ -91,9 +92,16 @@ const ResetPasswordScreen = ({ route }) => {
         const result = await dispatch(resetPassword({ email, otp, newPassword: password }));
 
         if (result.success) {
+            setPendingAuthData(result.data);
             setModalVisible(true);
         } else {
             Alert.alert('Reset Failed', result.message);
+        }
+    };
+
+    const handleModalDone = () => {
+        if (pendingAuthData) {
+            dispatch(confirmPasswordReset(pendingAuthData));
         }
     };
 
@@ -187,7 +195,11 @@ const ResetPasswordScreen = ({ route }) => {
                 </ScrollView>
             </KeyboardAvoidingView>
 
-            <SuccessModal isVisible={modalVisible} onClose={() => setModalVisible(false)} />
+            <SuccessModal
+                isVisible={modalVisible}
+                onClose={() => setModalVisible(false)}
+                onDone={handleModalDone}
+            />
         </GradientBackground>
     );
 };

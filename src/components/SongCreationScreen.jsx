@@ -11,6 +11,7 @@ import { useNavigation } from '@react-navigation/native';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { createSong, generateSongAudio, generateSongImage, uploadSongImage } from '../api/songsService';
 import { getMyVibes } from '../api/vibesService';
+import { getErrorMessage } from '../utils/errorHandler';
 import { useSubscription } from '../hooks/useSubscription';
 import { TABS } from './songCreation/constants';
 import { styles } from './songCreation/songCreationStyles';
@@ -247,9 +248,7 @@ const SongCreationScreen = () => {
 
         } catch (err) {
             setGenerating(false);
-            console.error('[Generate]', err?.response?.data ?? err?.message);
-            const msg = err?.response?.data?.message ?? err?.message ?? 'Generation failed.';
-            Alert.alert('Error', Array.isArray(msg) ? msg.join('\n') : msg);
+            Alert.alert('Error', getErrorMessage(err, 'Generation failed.'));
         }
     };
 

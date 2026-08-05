@@ -112,15 +112,30 @@ const LoginScreen = ({ navigation }) => {
       }),
     ]).start();
 
+    const trimmedEmail = email.trim().toLowerCase();
+
     const result = await dispatch(
       loginUser({
-        email: email.trim().toLowerCase(),
+        email: trimmedEmail,
         password,
       })
     );
 
     if (!result.success) {
-      Alert.alert("Login Failed", result.message);
+      if (result.message?.toLowerCase().includes("not verified")) {
+        Alert.alert("Email Not Verified", result.message, [
+          {
+            text: "Enter Code",
+            onPress: () =>
+              navigation.navigate("VerificationScreen", {
+                email: trimmedEmail,
+                type: "EMAIL_VERIFICATION",
+              }),
+          },
+        ]);
+      } else {
+        Alert.alert("Login Failed", result.message);
+      }
     }
   };
 
