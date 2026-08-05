@@ -13,8 +13,9 @@ import {
   getTokenBalance,
   getPlans,
 } from '../api/subscriptionsService';
+import { getErrorMessage } from '../utils/errorHandler';
 
-const TOKEN_COST_FULL_SONG = 100; // full song costs 100 tokens; 30s reel = 50; 15s reel = 25
+const TOKEN_COST_FULL_SONG = 100; // full song and reels (any duration) all cost a flat 100 tokens
 
 export const useSubscription = () => {
   const dispatch = useDispatch();
@@ -30,7 +31,7 @@ export const useSubscription = () => {
       
       dispatch(setSubscription(res.data?.data ?? res.data));
     } catch (e) {
-      dispatch(subscriptionError(e?.response?.data?.message ?? 'Failed to load subscription'));
+      dispatch(subscriptionError(getErrorMessage(e, 'Failed to load subscription')));
     }
   }, [dispatch]);
 
@@ -40,7 +41,7 @@ export const useSubscription = () => {
       const res = await getTokenBalance();
       dispatch(setTokens(res.data?.data ?? res.data));
     } catch (e) {
-      dispatch(subscriptionError(e?.response?.data?.message ?? 'Failed to load tokens'));
+      dispatch(subscriptionError(getErrorMessage(e, 'Failed to load tokens')));
     }
   }, [dispatch]);
 

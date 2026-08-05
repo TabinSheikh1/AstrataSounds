@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   Animated,
   Easing,
+  ImageBackground,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
@@ -101,11 +102,10 @@ const SubscriptionSuccessScreen = () => {
   const planName = subscription?.plan?.name ?? 'your new plan';
 
   return (
-    <LinearGradient
-      colors={['#0066CC', 'rgba(0,153,153,1)', '#66cc33']}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 0.3, y: 1 }}
+    <ImageBackground
+      source={require('../assets/images/image-1.jpg')}
       style={styles.root}
+      resizeMode="cover"
     >
       <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
 
@@ -188,7 +188,7 @@ const SubscriptionSuccessScreen = () => {
           </TouchableOpacity>
         </Animated.View>
       </View>
-    </LinearGradient>
+    </ImageBackground>
   );
 };
 

@@ -13,6 +13,7 @@ import {
 import LinearGradient from 'react-native-linear-gradient';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { createCheckoutSession } from '../api/subscriptionsService';
+import { getErrorMessage } from '../utils/errorHandler';
 
 const PLAN_PERKS = {
   Basic: [
@@ -87,7 +88,7 @@ const CheckoutConfirmModal = ({
     } catch (e) {
       Alert.alert(
         'Checkout Failed',
-        e?.response?.data?.message ?? 'Something went wrong. Please try again.',
+        getErrorMessage(e, 'Something went wrong. Please try again.'),
       );
     } finally {
       setLoading(false);

@@ -13,6 +13,7 @@ import {
 import LinearGradient from 'react-native-linear-gradient';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { getTokenHistory } from '../api/subscriptionsService';
+import { getErrorMessage } from '../utils/errorHandler';
 import { useSubscription } from '../hooks/useSubscription';
 
 const fmt = (iso) => {
@@ -102,7 +103,7 @@ const TokenHistoryDrawer = ({ visible, onClose }) => {
       const res = await getTokenHistory();
       setHistory(res.data?.data ?? res.data ?? []);
     } catch (e) {
-      setError(e?.response?.data?.message ?? 'Failed to load history');
+      setError(getErrorMessage(e, 'Failed to load history'));
     } finally {
       setLoading(false);
     }
@@ -152,8 +153,7 @@ const TokenHistoryDrawer = ({ visible, onClose }) => {
             </View>
             <View style={styles.balanceRight}>
               <Text style={styles.costNote}>1 cr · full song</Text>
-              <Text style={[styles.costNote, { marginTop: 2 }]}>0.5 cr · 30s reel</Text>
-              <Text style={[styles.costNote, { marginTop: 2 }]}>0.25 cr · 15s reel</Text>
+              <Text style={[styles.costNote, { marginTop: 2 }]}>1 cr · reel (15s or 30s)</Text>
               {periodEnd && (
                 <Text style={styles.resetNote}>Resets {periodEnd}</Text>
               )}

@@ -24,7 +24,7 @@ import {
     CreditCard, Zap,
 } from 'lucide-react-native';
 import { useDispatch, useSelector } from 'react-redux';
-import { logout } from '../store/slices/authSlice';
+import { logoutUser } from '../store/actions/authActions';
 import { SERVER_URL as BASE_URL } from '../config/api';
 const DRAWER_WIDTH = Dimensions.get('window').width * 0.85;
 
@@ -109,7 +109,7 @@ const MenuScreen = ({ visible, onClose }) => {
 
     const handleLogout = () => {
         onClose();
-        dispatch(logout());
+        dispatch(logoutUser());
     };
 
     const animStyle = (opacityAnim, slideAnim) => ({

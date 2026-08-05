@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useSubscription } from '../hooks/useSubscription';
+import WelcomeTokensModal from '../components/WelcomeTokensModal';
 
 import SplashScreen from '../components/SplashScreen';
 import ContentReviewScreen from '../components/ContentReviewScreen';
@@ -11,6 +12,7 @@ import ForgotPasswordScreen from '../components/forgotPasswordScreen';
 import VerificationScreen from '../components/VerificationScreen';
 import ResetPasswordScreen from '../components/ResetPasswordScreen';
 import SongDetailScreen from '../components/SongDetailScreen';
+import PlaylistDetailScreen from '../components/PlaylistDetailScreen';
 import LeaderBoardScreen from '../components/LeaderBoardScreen';
 import SingersScreen from '../components/SingersScreen';
 import PricingScreen from '../components/PricingScreen';
@@ -46,6 +48,7 @@ const AppStack = () => (
   <Stack.Navigator screenOptions={{ headerShown: false }}>
     <Stack.Screen name="MainApp" component={MainTabNavigator} />
     <Stack.Screen name="SongDetailScreen" component={SongDetailScreen} />
+    <Stack.Screen name="PlaylistDetailScreen" component={PlaylistDetailScreen} />
     <Stack.Screen name="LeaderBoardScreen" component={LeaderBoardScreen} />
     <Stack.Screen name="SingersScreen" component={SingersScreen} />
     <Stack.Screen name="PricingScreen" component={PricingScreen} />
@@ -64,7 +67,7 @@ const AppStack = () => (
 );
 
 const AppNavigator = () => {
-  const { isAuthenticated } = useSelector((state) => state.auth);
+  const { isAuthenticated, showWelcomeModal } = useSelector((state) => state.auth);
   const { refreshAll, fetchPlans } = useSubscription();
   const [showSplash, setShowSplash] = useState(true);
   const [showReview, setShowReview] = useState(false);
@@ -93,7 +96,16 @@ const AppNavigator = () => {
     return <ContentReviewScreen onContinue={() => setShowReview(false)} />;
   }
 
-  return isAuthenticated ? <AppStack /> : <AuthStack />;
+  if (!isAuthenticated) {
+    return <AuthStack />;
+  }
+
+  return (
+    <>
+      <AppStack />
+      <WelcomeTokensModal isVisible={showWelcomeModal} />
+    </>
+  );
 };
 
 export default AppNavigator;

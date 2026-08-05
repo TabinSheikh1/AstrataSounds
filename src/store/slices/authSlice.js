@@ -7,6 +7,7 @@ const initialState = {
   isAuthenticated: false,
   isLoading: false,
   error: null,
+  showWelcomeModal: false,
 };
 
 const authSlice = createSlice({
@@ -51,6 +52,16 @@ const authSlice = createSlice({
       state.user = { ...state.user, ...action.payload };
     },
 
+    // Shown once, right after a brand-new account finishes email verification
+    // and its free Spark subscription (500 trial tokens) is provisioned.
+    triggerWelcomeModal: (state) => {
+      state.showWelcomeModal = true;
+    },
+
+    dismissWelcomeModal: (state) => {
+      state.showWelcomeModal = false;
+    },
+
     logout: (state) => {
       state.user = null;
       state.accessToken = null;
@@ -58,6 +69,7 @@ const authSlice = createSlice({
       state.isAuthenticated = false;
       state.isLoading = false;
       state.error = null;
+      state.showWelcomeModal = false;
     },
   },
 });
@@ -69,6 +81,8 @@ export const {
   updateUser,
   authFailure,
   clearAuthError,
+  triggerWelcomeModal,
+  dismissWelcomeModal,
   logout,
 } = authSlice.actions;
 

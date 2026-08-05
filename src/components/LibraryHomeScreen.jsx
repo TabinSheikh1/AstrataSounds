@@ -27,6 +27,7 @@ import { getMySongs, deleteSong, toggleLikeSong } from '../api/songsService';
 import { getMyVibes, createVibe, deleteVibe } from '../api/vibesService';
 import { getMyPlaylists, createPlaylist, deletePlaylist, addSongToPlaylist, generatePlaylistBanner, uploadPlaylistBanner } from '../api/playlistsService';
 import { launchImageLibrary } from 'react-native-image-picker';
+import { getErrorMessage } from '../utils/errorHandler';
 
 const { width } = Dimensions.get('window');
 const MAIN_TABS = ['Songs', 'Vibe', 'Playlist'];
@@ -765,7 +766,7 @@ const CreateVibeModal = ({ visible, onClose, onCreate }) => {
       await onCreate({ name: name.trim(), energy, tempo, vocalStyle, moods, genres, instruments, settings, keywords });
       onClose();
     } catch (err) {
-      Alert.alert('Error', err?.response?.data?.message ?? 'Could not create vibe.');
+      Alert.alert('Error', getErrorMessage(err, 'Could not create vibe.'));
     } finally {
       setLoading(false);
     }
@@ -1162,11 +1163,7 @@ const CreatePlaylistModal = ({ visible, onClose, onCreate, userSongs }) => {
       await onCreate();
       onClose();
     } catch (err) {
-      console.error('[Playlist] creation error:', err?.response?.data ?? err?.message ?? err);
-      const msg = err?.response?.data?.message
-        ?? err?.message
-        ?? 'Could not create playlist.';
-      Alert.alert('Error', Array.isArray(msg) ? msg.join('\n') : msg);
+      Alert.alert('Error', getErrorMessage(err, 'Could not create playlist.'));
     } finally {
       setLoading(false);
       setLoadingStep('');
@@ -1348,6 +1345,7 @@ const CreatePlaylistModal = ({ visible, onClose, onCreate, userSongs }) => {
 // Main Screen
 // ─────────────────────────────────────────────
 const LibraryHomeScreen = () => {
+  const navigation = useNavigation();
   const [selectedTab, setSelectedTab] = useState('Songs');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -1439,8 +1437,7 @@ const LibraryHomeScreen = () => {
       const newVibe = await createVibe(payload);
       setVibes((prev) => [newVibe?.data ?? newVibe, ...prev]);
     } catch (err) {
-      const msg = err?.response?.data?.message ?? err?.message ?? 'Could not create Vibe preset.';
-      Alert.alert('Vibe Limit Reached', Array.isArray(msg) ? msg.join('\n') : msg);
+      Alert.alert('Vibe Limit Reached', getErrorMessage(err, 'Could not create Vibe preset.'));
     }
   };
 
@@ -1613,7 +1610,11 @@ const LibraryHomeScreen = () => {
           data={playlists}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
-            <PlaylistCard playlist={item} onDelete={handleDeletePlaylist} />
+            <PlaylistCard
+              playlist={item}
+              onDelete={handleDeletePlaylist}
+              onPress={() => navigation.navigate('PlaylistDetailScreen', { playlistId: item.id })}
+            />
           )}
           contentContainerStyle={styles.songList}
           showsVerticalScrollIndicator={false}

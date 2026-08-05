@@ -17,7 +17,7 @@ import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSelector } from 'react-redux';
 import { getAllSongs, getMySongs } from '../api/songsService';
-import { getMyPlaylists } from '../api/playlistsService';
+import { getAllPlaylists, toggleLikePlaylist } from '../api/playlistsService';
 import Header from './Header';
 import { SERVER_URL as FILE_BASE } from '../config/api';
 
@@ -93,21 +93,21 @@ const SongCard = ({ item, onPress }) => (
         <Text style={s.songCardTitle} numberOfLines={1}>{item.title}</Text>
         <View style={s.songCardMeta}>
           <MaterialIcons name="headset" size={11} color="rgba(255,255,255,0.55)" />
-          <Text style={s.metaText}>{formatCount(item.listensCount)}</Text>
+          <Text style={s.metaText}>{formatCount(item.listens)}</Text>
           <View style={s.metaDot} />
           <MaterialIcons name="favorite" size={11} color="rgba(255,255,255,0.55)" />
-          <Text style={s.metaText}>{formatCount(item.likesCount)}</Text>
+          <Text style={s.metaText}>{formatCount(item.likes)}</Text>
         </View>
       </LinearGradient>
     </TouchableOpacity>
 );
 
-const PlaylistCard = ({ item }) => {
+const PlaylistCard = ({ item, onPress, onLike, liked, likeCount }) => {
   const count = item.songs?.length ?? 0;
   return (
-    <TouchableOpacity style={s.playlistCard} activeOpacity={0.88}>
-      {item.bannerUrl ? (
-        <Image source={{ uri: `${FILE_BASE}${item.bannerUrl}` }} style={s.playlistCover} />
+    <TouchableOpacity style={s.playlistCard} onPress={onPress} activeOpacity={0.88}>
+      {item.bannerImage ? (
+        <Image source={{ uri: `${FILE_BASE}${item.bannerImage}` }} style={s.playlistCover} />
       ) : (
         <LinearGradient
           colors={['#0d1b2a', '#16213e', '#0f3460']}
@@ -120,6 +120,21 @@ const PlaylistCard = ({ item }) => {
         <MaterialIcons name="music-note" size={10} color="#fff" />
         <Text style={s.playlistBadgeText}>{count}</Text>
       </View>
+      <TouchableOpacity
+        style={s.playlistLikeBtn}
+        onPress={onLike}
+        activeOpacity={0.7}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      >
+        <MaterialIcons
+          name={liked ? 'favorite' : 'favorite-border'}
+          size={13}
+          color={liked ? '#ff4d6d' : '#fff'}
+        />
+        <Text style={[s.playlistLikeText, liked && s.playlistLikeTextActive]}>
+          {formatCount(likeCount)}
+        </Text>
+      </TouchableOpacity>
       <LinearGradient
         colors={['transparent', 'rgba(0,0,0,0.9)']}
         style={s.playlistOverlay}
@@ -165,6 +180,7 @@ const HomeScreen = () => {
 
   const [songs, setSongs] = useState([]);
   const [playlists, setPlaylists] = useState([]);
+  const [playlistLikes, setPlaylistLikes] = useState({});
   const [mySongsCount, setMySongsCount] = useState(0);
   const [songsLoading, setSongsLoading] = useState(false);
   const [playlistsLoading, setPlaylistsLoading] = useState(false);
@@ -177,11 +193,20 @@ const HomeScreen = () => {
     try {
       const [songsRes, playlistsRes, mySongsRes] = await Promise.all([
         getAllSongs().catch(() => ({})),
-        getMyPlaylists().catch(() => ({})),
+        // Playlists are already sorted most-liked-first by the backend
+        getAllPlaylists().catch(() => ({})),
         getMySongs().catch(() => ({})),
       ]);
       setSongs(Array.isArray(songsRes) ? songsRes : (songsRes?.data ?? []));
-      setPlaylists(Array.isArray(playlistsRes) ? playlistsRes : (playlistsRes?.data ?? []));
+      const playlistsList = Array.isArray(playlistsRes) ? playlistsRes : (playlistsRes?.data ?? []);
+      setPlaylists(playlistsList);
+      setPlaylistLikes((prev) => {
+        const next = { ...prev };
+        playlistsList.forEach((p) => {
+          if (!next[p.id]) next[p.id] = { liked: false, count: p.likes ?? 0 };
+        });
+        return next;
+      });
       const mySongsList = Array.isArray(mySongsRes) ? mySongsRes : (mySongsRes?.data ?? []);
       setMySongsCount(mySongsList.length);
     } finally {
@@ -189,6 +214,22 @@ const HomeScreen = () => {
       setPlaylistsLoading(false);
     }
   }, []);
+
+  const handleLikePlaylist = async (playlist) => {
+    const prev = playlistLikes[playlist.id] ?? { liked: false, count: playlist.likes ?? 0 };
+    setPlaylistLikes((st) => ({
+      ...st,
+      [playlist.id]: {
+        liked: !prev.liked,
+        count: prev.liked ? Math.max(0, prev.count - 1) : prev.count + 1,
+      },
+    }));
+    try {
+      await toggleLikePlaylist(playlist.id);
+    } catch {
+      setPlaylistLikes((st) => ({ ...st, [playlist.id]: prev }));
+    }
+  };
 
   useFocusEffect(
     useCallback(() => { loadData(); }, [loadData]),
@@ -316,9 +357,9 @@ const HomeScreen = () => {
           />
         )}
 
-        {/* ── My Playlists ──────────────────────────────── */}
+        {/* ── Popular Playlists ─────────────────────────── */}
         <SectionHeader
-          title="My Playlists"
+          title="Popular Playlists"
           onSeeAll={() => navigation.navigate('LibraryHomeScreen')}
         />
 
@@ -337,7 +378,15 @@ const HomeScreen = () => {
             horizontal
             data={playlists.slice(0, 12)}
             keyExtractor={(item) => String(item.id)}
-            renderItem={({ item }) => <PlaylistCard item={item} />}
+            renderItem={({ item }) => (
+              <PlaylistCard
+                item={item}
+                liked={playlistLikes[item.id]?.liked ?? false}
+                likeCount={playlistLikes[item.id]?.count ?? item.likes ?? 0}
+                onLike={() => handleLikePlaylist(item)}
+                onPress={() => navigation.navigate('PlaylistDetailScreen', { playlistId: item.id })}
+              />
+            )}
             contentContainerStyle={s.hList}
             showsHorizontalScrollIndicator={false}
           />
@@ -678,6 +727,26 @@ const s = StyleSheet.create({
     fontSize: 10,
     fontFamily: 'Oswald-Bold',
   },
+  playlistLikeBtn: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    borderRadius: 8,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
+  },
+  playlistLikeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontFamily: 'Oswald-Bold',
+  },
+  playlistLikeTextActive: { color: '#ff4d6d' },
   playlistOverlay: {
     position: 'absolute',
     bottom: 0,
