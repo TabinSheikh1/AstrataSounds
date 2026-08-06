@@ -13,9 +13,11 @@ const CoverTab = ({ coverMode, setCoverMode, imagePrompt, setImagePrompt, upload
 
         <View style={styles.coverHeaderCard}>
             <LinearGradient colors={['rgba(102,204,51,0.12)', 'rgba(4,126,201,0.12)']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.coverHeaderGrad}>
-                <MaterialIcons name="image" size={32} color="#66cc33" />
-                <Text style={styles.coverHeaderTitle}>Song Cover Art</Text>
-                <Text style={styles.coverHeaderSub}>Add a cover image — upload your own or let AI paint one for you.</Text>
+                <View style={styles.coverHeaderContent}>
+                    <MaterialIcons name="image" size={32} color="#66cc33" />
+                    <Text style={styles.coverHeaderTitle}>Song Cover Art</Text>
+                    <Text style={styles.coverHeaderSub}>Add a cover image — upload your own or let AI paint one for you.</Text>
+                </View>
             </LinearGradient>
         </View>
 

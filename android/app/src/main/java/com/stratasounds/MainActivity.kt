@@ -1,5 +1,6 @@
 package com.stratasounds
 
+import android.content.Intent
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
 import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint.fabricEnabled
@@ -19,4 +20,13 @@ class MainActivity : ReactActivity() {
    */
   override fun createReactActivityDelegate(): ReactActivityDelegate =
       DefaultReactActivityDelegate(this, mainComponentName, fabricEnabled)
+
+  // Deep links (e.g. strataSounds://subscription/success from the Stripe checkout
+  // redirect) arrive as a new Intent when the app is already running in the
+  // background. Without updating the activity's intent here, getIntent() stays
+  // stale and React Native's Linking module never sees the new URL.
+  override fun onNewIntent(intent: Intent) {
+    super.onNewIntent(intent)
+    setIntent(intent)
+  }
 }

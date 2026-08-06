@@ -19,8 +19,8 @@ import { useNavigation } from '@react-navigation/native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import {
     Share2, MessageSquare, Mail, HelpCircle,
-    FileText, ShieldCheck, RefreshCw, Trophy,
-    Mic, Facebook, Twitter, Youtube, Instagram,
+    FileText, ShieldCheck, RefreshCw, Trophy, Award,
+    Facebook, Twitter, Youtube, Instagram,
     CreditCard, Zap,
 } from 'lucide-react-native';
 import { useDispatch, useSelector } from 'react-redux';
@@ -241,7 +241,7 @@ const MenuScreen = ({ visible, onClose }) => {
                                 <Separator />
                                 <MenuItem icon={Trophy} label="Leaderboard" onPress={() => navigateTo('LeaderBoardScreen')} />
                                 <Separator />
-                                <MenuItem icon={Mic} label="Singers" onPress={() => navigateTo('SingersScreen')} />
+                                <MenuItem icon={Award} label="Competitions" onPress={() => navigateTo('CompetitionsScreen')} />
                             </View>
                         </Animated.View>
 

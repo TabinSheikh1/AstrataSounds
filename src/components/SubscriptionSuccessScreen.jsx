@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   Animated,
   Easing,
   ImageBackground,
+  ActivityIndicator,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
@@ -22,9 +23,19 @@ const Particle = ({ style }) => (
 
 const COLORS = ['#66cc33', '#047ec9', '#FBBF24', '#fff', '#0066CC'];
 
+// Plan activation happens via an async Stripe webhook, which can land after
+// (not before) the OS finishes the deep-link redirect back into the app —
+// so we poll briefly instead of trusting a single one-shot refetch.
+const POLL_INTERVAL_MS = 2000;
+const MAX_POLL_ATTEMPTS = 6; // ~12s total before we stop waiting and show a softer message
+
 const SubscriptionSuccessScreen = () => {
   const navigation = useNavigation();
   const { subscription, refreshAll } = useSubscription();
+
+  const [confirming, setConfirming] = useState(true);
+  const [timedOut, setTimedOut] = useState(false);
+  const attemptsRef = useRef(0);
 
   const scaleAnim = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -37,9 +48,45 @@ const SubscriptionSuccessScreen = () => {
     })),
   ).current;
 
+  const isConfirmedActive = subscription?.status === 'active' && subscription?.plan?.tier !== 'spark';
+
+  // Kick off the first check as soon as the deep link lands us here.
   useEffect(() => {
-    // Refetch subscription after Stripe redirects back
     refreshAll();
+  }, [refreshAll]);
+
+  // Keep polling until the plan actually reflects the upgrade, or we give up.
+  useEffect(() => {
+    if (!confirming) return undefined;
+
+    if (isConfirmedActive) {
+      setConfirming(false);
+      return undefined;
+    }
+
+    if (attemptsRef.current >= MAX_POLL_ATTEMPTS) {
+      setTimedOut(true);
+      setConfirming(false);
+      return undefined;
+    }
+
+    const timer = setTimeout(() => {
+      attemptsRef.current += 1;
+      refreshAll();
+    }, POLL_INTERVAL_MS);
+
+    return () => clearTimeout(timer);
+  }, [subscription, confirming, isConfirmedActive, refreshAll]);
+
+  const handleManualRetry = () => {
+    attemptsRef.current = 0;
+    setTimedOut(false);
+    setConfirming(true);
+    refreshAll();
+  };
+
+  useEffect(() => {
+    if (confirming) return; // hold the celebration animation until confirmation resolves
 
     // Entrance animation
     Animated.parallel([
@@ -97,9 +144,26 @@ const SubscriptionSuccessScreen = () => {
         ]),
       ]).start();
     });
-  }, []);
+  }, [confirming, confettiAnims, fadeAnim, scaleAnim]);
 
   const planName = subscription?.plan?.name ?? 'your new plan';
+
+  if (confirming) {
+    return (
+      <ImageBackground
+        source={require('../assets/images/image-1.jpg')}
+        style={styles.root}
+        resizeMode="cover"
+      >
+        <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color="#66cc33" />
+          <Text style={styles.confirmingTitle}>Confirming your payment...</Text>
+          <Text style={styles.note}>This only takes a few seconds.</Text>
+        </View>
+      </ImageBackground>
+    );
+  }
 
   return (
     <ImageBackground
@@ -152,17 +216,31 @@ const SubscriptionSuccessScreen = () => {
         </Animated.View>
 
         <Animated.View style={{ opacity: fadeAnim, alignItems: 'center' }}>
-          <Text style={styles.title}>You're all set!</Text>
-          <Text style={styles.subtitle}>
-            You're now on{' '}
-            <Text style={styles.planName}>{planName}</Text>
-          </Text>
-          <Text style={styles.note}>
-            Your song credits have been refreshed. Start creating AI music now.
-          </Text>
+          <Text style={styles.title}>{timedOut ? 'Payment received!' : "You're all set!"}</Text>
+          {timedOut ? (
+            <Text style={styles.note}>
+              We're still finishing setup on our end — this can take a minute. Pull to refresh on the billing screen if your plan doesn't show up right away.
+            </Text>
+          ) : (
+            <>
+              <Text style={styles.subtitle}>
+                You're now on{' '}
+                <Text style={styles.planName}>{planName}</Text>
+              </Text>
+              <Text style={styles.note}>
+                Your song credits have been refreshed. Start creating AI music now.
+              </Text>
+            </>
+          )}
         </Animated.View>
 
         <Animated.View style={{ opacity: fadeAnim, width: '100%', marginTop: 32 }}>
+          {timedOut && (
+            <TouchableOpacity onPress={handleManualRetry} style={styles.secondaryBtn}>
+              <Text style={styles.secondaryBtnText}>Check again</Text>
+            </TouchableOpacity>
+          )}
+
           {/* Start Creating */}
           <TouchableOpacity
             onPress={() => navigation.navigate('MainApp')}
@@ -172,10 +250,11 @@ const SubscriptionSuccessScreen = () => {
               colors={['#66cc33', '#047ec9']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
-              style={styles.ctaBtn}
             >
-              <MaterialIcons name="bolt" size={20} color="#fff" />
-              <Text style={styles.ctaBtnText}>Start Creating</Text>
+              <View style={styles.ctaBtn}>
+                <MaterialIcons name="bolt" size={20} color="#fff" />
+                <Text style={styles.ctaBtnText}>Start Creating</Text>
+              </View>
             </LinearGradient>
           </TouchableOpacity>
 
@@ -208,6 +287,14 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
+  },
+  confirmingTitle: {
+    color: '#fff',
+    fontSize: 18,
+    fontFamily: 'Oswald-Bold',
+    marginTop: 20,
+    marginBottom: 6,
+    textAlign: 'center',
   },
   iconWrap: { marginBottom: 24 },
   iconGrad: {

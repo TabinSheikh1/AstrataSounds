@@ -16,6 +16,7 @@ import { useSubscription } from '../hooks/useSubscription';
 import { TABS } from './songCreation/constants';
 import { styles } from './songCreation/songCreationStyles';
 import MoodPickerModal from './songCreation/MoodPickerModal';
+import GenrePickerModal from './songCreation/GenrePickerModal';
 import GeneratingOverlay from './songCreation/GeneratingOverlay';
 import LyricsTab from './songCreation/LyricsTab';
 import CoverTab from './songCreation/CoverTab';
@@ -99,6 +100,7 @@ const SongCreationScreen = () => {
     const [lyricsMode, setLyricsMode]           = useState('manual');
     const [selectedMood, setSelectedMood]       = useState(null);
     const [showMoodPicker, setShowMoodPicker]   = useState(false);
+    const [showGenrePicker, setShowGenrePicker] = useState(false);
     const [vibes, setVibes]                     = useState([]);
     const [selectedVibeId, setSelectedVibeId]   = useState(null);
     const [vibesLoading, setVibesLoading]       = useState(false);
@@ -154,6 +156,11 @@ const SongCreationScreen = () => {
         setLyricsMode('ai');
         setLyricsText('');
         setShowMoodPicker(false);
+    };
+
+    const handleGenreSelect = (category) => {
+        setSelectedCategory(category);
+        setShowGenrePicker(false);
     };
 
     const pickImage = async () => {
@@ -262,7 +269,7 @@ const SongCreationScreen = () => {
                     instrumental={instrumental} setInstrumental={setInstrumental}
                     styleMode={styleMode} setStyleMode={setStyleMode}
                     styleText={styleText} setStyleText={setStyleText}
-                    selectedCategory={selectedCategory} setSelectedCategory={setSelectedCategory}
+                    selectedCategory={selectedCategory} setShowGenrePicker={setShowGenrePicker}
                     lyricsText={lyricsText} setLyricsText={setLyricsText}
                     lyricsMode={lyricsMode} setLyricsMode={setLyricsMode}
                     selectedMood={selectedMood}
@@ -366,6 +373,12 @@ const SongCreationScreen = () => {
                 visible={showMoodPicker}
                 onSelect={handleMoodSelect}
                 onClose={() => setShowMoodPicker(false)}
+            />
+            <GenrePickerModal
+                visible={showGenrePicker}
+                selectedCategory={selectedCategory}
+                onSelect={handleGenreSelect}
+                onClose={() => setShowGenrePicker(false)}
             />
             <GeneratingOverlay visible={generating} step={genStep} />
         </ImageBackground>

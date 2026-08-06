@@ -4,7 +4,7 @@ import {
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import { CATEGORIES, LANGUAGES } from './constants';
+import { LANGUAGES } from './constants';
 import { styles } from './songCreationStyles';
 import SectionLabel from './SectionLabel';
 import GlassBox from './GlassBox';
@@ -13,7 +13,7 @@ const LyricsTab = ({
     instrumental, setInstrumental,
     styleMode, setStyleMode,
     styleText, setStyleText,
-    selectedCategory, setSelectedCategory,
+    selectedCategory, setShowGenrePicker,
     lyricsText, setLyricsText,
     lyricsMode, setLyricsMode,
     selectedMood, setSelectedMood,
@@ -58,6 +58,20 @@ const LyricsTab = ({
             </TouchableOpacity>
         </View>
 
+        {/* Genre selector */}
+        <TouchableOpacity
+            style={styles.genreSelectBtn}
+            onPress={() => setShowGenrePicker(true)}
+            activeOpacity={0.8}
+        >
+            <MaterialIcons name="queue-music" size={18} color="#66cc33" />
+            <View style={{ flex: 1 }}>
+                <Text style={styles.genreSelectText}>Genre</Text>
+                <Text style={styles.genreSelectValue} numberOfLines={1}>{selectedCategory}</Text>
+            </View>
+            <MaterialIcons name="keyboard-arrow-down" size={20} color="rgba(255,255,255,0.5)" />
+        </TouchableOpacity>
+
         {/* Prompt mode */}
         {styleMode === 'prompt' && (
             <GlassBox>
@@ -71,50 +85,12 @@ const LyricsTab = ({
                     onChangeText={setStyleText}
                 />
                 <Text style={styles.charCount}>{styleText.length} / 500</Text>
-                <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    style={styles.categoryScroll}
-                    contentContainerStyle={styles.categoryScrollContent}
-                    keyboardShouldPersistTaps="handled"
-                >
-                    {CATEGORIES.map((cat) => {
-                        const isSel = selectedCategory === cat.value;
-                        return (
-                            <TouchableOpacity
-                                key={cat.value}
-                                onPress={() => setSelectedCategory(cat.value)}
-                                style={[styles.tag, isSel && styles.tagActive]}
-                            >
-                                <Text style={[styles.tagText, isSel && styles.tagTextActive]}>{cat.label}</Text>
-                            </TouchableOpacity>
-                        );
-                    })}
-                </ScrollView>
             </GlassBox>
         )}
 
         {/* Vibe mode */}
         {styleMode === 'vibe' && (
             <View>
-                {/* Horizontal category scroll */}
-                <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    style={styles.categoryScroll}
-                    contentContainerStyle={styles.categoryScrollContent}
-                    keyboardShouldPersistTaps="handled"
-                >
-                    {CATEGORIES.map((cat) => {
-                        const isSel = selectedCategory === cat.value;
-                        return (
-                            <TouchableOpacity key={cat.value} onPress={() => setSelectedCategory(cat.value)} style={[styles.tag, isSel && styles.tagActive]}>
-                                <Text style={[styles.tagText, isSel && styles.tagTextActive]}>{cat.label}</Text>
-                            </TouchableOpacity>
-                        );
-                    })}
-                </ScrollView>
-                <View style={{ height: 6 }} />
                 {vibesLoading ? (
                     <View style={styles.vibeLoadingRow}>
                         <ActivityIndicator size="small" color="#66cc33" />

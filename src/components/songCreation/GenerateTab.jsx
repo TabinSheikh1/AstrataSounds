@@ -96,13 +96,15 @@ const GenerateTab = ({
                     start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
                     style={styles.genHeroGrad}
                 >
-                    <View style={styles.genHeroIconWrap}>
-                        <MaterialIcons name="auto-awesome" size={26} color="#66cc33" />
+                    <View style={styles.genHeroContent}>
+                        <View style={styles.genHeroIconWrap}>
+                            <MaterialIcons name="auto-awesome" size={26} color="#66cc33" />
+                        </View>
+                        <Text style={styles.genHeroTitle}>Ready to Create</Text>
+                        <Text style={styles.genHeroSub}>
+                            {completedCount} of {summaryRows.length} options configured · Add a title and generate!
+                        </Text>
                     </View>
-                    <Text style={styles.genHeroTitle}>Ready to Create</Text>
-                    <Text style={styles.genHeroSub}>
-                        {completedCount} of {summaryRows.length} options configured · Add a title and generate!
-                    </Text>
                 </LinearGradient>
             </View>
 

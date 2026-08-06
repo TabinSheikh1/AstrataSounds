@@ -31,6 +31,18 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     return true
   }
+
+  // Forwards custom-scheme opens (e.g. strataSounds://subscription/success from the
+  // Stripe checkout redirect) into React Native's Linking module. Without this,
+  // iOS opens the app but JS never receives the URL — getInitialURL() stays null
+  // and no 'url' event fires.
+  func application(
+    _ application: UIApplication,
+    open url: URL,
+    options: [UIApplication.OpenURLOptionsKey: Any] = [:]
+  ) -> Bool {
+    return RCTLinkingManager.application(application, open: url, options: options)
+  }
 }
 
 class ReactNativeDelegate: RCTDefaultReactNativeFactoryDelegate {

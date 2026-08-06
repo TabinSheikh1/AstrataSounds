@@ -14,6 +14,7 @@ import ResetPasswordScreen from '../components/ResetPasswordScreen';
 import SongDetailScreen from '../components/SongDetailScreen';
 import PlaylistDetailScreen from '../components/PlaylistDetailScreen';
 import LeaderBoardScreen from '../components/LeaderBoardScreen';
+import CompetitionsScreen from '../components/CompetitionsScreen';
 import SingersScreen from '../components/SingersScreen';
 import PricingScreen from '../components/PricingScreen';
 import BillingScreen from '../components/BillingScreen';
@@ -50,6 +51,7 @@ const AppStack = () => (
     <Stack.Screen name="SongDetailScreen" component={SongDetailScreen} />
     <Stack.Screen name="PlaylistDetailScreen" component={PlaylistDetailScreen} />
     <Stack.Screen name="LeaderBoardScreen" component={LeaderBoardScreen} />
+    <Stack.Screen name="CompetitionsScreen" component={CompetitionsScreen} />
     <Stack.Screen name="SingersScreen" component={SingersScreen} />
     <Stack.Screen name="PricingScreen" component={PricingScreen} />
     <Stack.Screen name="BillingScreen" component={BillingScreen} />

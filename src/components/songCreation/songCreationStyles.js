@@ -366,12 +366,14 @@ export const styles = StyleSheet.create({
         overflow: 'hidden',
     },
     coverHeaderGrad: {
-        paddingVertical: 20,
-        alignItems: 'center',
-        gap: 8,
         borderRadius: 16,
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.08)',
+    },
+    coverHeaderContent: {
+        paddingVertical: 20,
+        alignItems: 'center',
+        gap: 8,
     },
     coverHeaderTitle: {
         color: '#fff',
@@ -455,6 +457,8 @@ export const styles = StyleSheet.create({
     },
     genHeroGrad: {
         width: '100%',
+    },
+    genHeroContent: {
         alignItems: 'center',
         paddingVertical: 20,
         gap: 8,
@@ -602,6 +606,94 @@ export const styles = StyleSheet.create({
     },
     moodEmoji: { fontSize: 22, marginTop: 8 },
     moodLabel: { fontFamily: 'Oswald-Bold', fontSize: 10, letterSpacing: 0.5, marginBottom: 8 },
+
+    // ── Genre select button (Lyrics tab) ────────────────────────
+    genreSelectBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+        backgroundColor: 'rgba(255,255,255,0.06)',
+        borderRadius: 14,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.15)',
+        paddingHorizontal: 14,
+        paddingVertical: 12,
+        marginBottom: 14,
+    },
+    genreSelectText: {
+        color: 'rgba(255,255,255,0.45)',
+        fontFamily: 'Oswald-Regular',
+        fontSize: 11,
+    },
+    genreSelectValue: {
+        color: '#fff',
+        fontFamily: 'Oswald-Bold',
+        fontSize: 14,
+        marginTop: 1,
+    },
+
+    // ── Genre picker modal ──────────────────────────────────────
+    genreOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.75)',
+        justifyContent: 'flex-end',
+    },
+    genreSheet: {
+        height: '78%',
+        backgroundColor: '#0d1117',
+        borderTopLeftRadius: 28,
+        borderTopRightRadius: 28,
+        padding: 24,
+        paddingBottom: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
+    },
+    genreSearchWrap: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        backgroundColor: 'rgba(255,255,255,0.08)',
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.12)',
+        paddingHorizontal: 12,
+        marginBottom: 14,
+    },
+    genreSearchInput: {
+        flex: 1,
+        color: '#fff',
+        fontFamily: 'Oswald-Regular',
+        fontSize: 14,
+        paddingVertical: 10,
+    },
+    genreList: { flex: 1 },
+    genreRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingVertical: 13,
+        paddingHorizontal: 14,
+        borderRadius: 12,
+        marginBottom: 6,
+    },
+    genreRowActive: {
+        backgroundColor: 'rgba(102,204,51,0.12)',
+        borderWidth: 1,
+        borderColor: 'rgba(102,204,51,0.4)',
+    },
+    genreRowText: {
+        color: 'rgba(255,255,255,0.75)',
+        fontFamily: 'Oswald-Regular',
+        fontSize: 14,
+    },
+    genreRowTextActive: { color: '#fff', fontFamily: 'Oswald-Bold' },
+    genreEmptyText: {
+        color: 'rgba(255,255,255,0.4)',
+        fontFamily: 'Oswald-Regular',
+        fontSize: 13,
+        textAlign: 'center',
+        marginTop: 24,
+    },
 
     // ── Generating overlay ─────────────────────────────────────
     genOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 999 },
