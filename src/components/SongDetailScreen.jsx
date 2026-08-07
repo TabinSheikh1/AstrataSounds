@@ -18,18 +18,21 @@ import LinearGradient from 'react-native-linear-gradient';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { useSelector } from 'react-redux';
 import TrackPlayer, { useProgress, State, usePlaybackState, RepeatMode } from 'react-native-track-player';
 import { useSubscription } from '../hooks/useSubscription';
 import UpgradePromptModal from './UpgradePromptModal';
 import ReelCreatorModal from './ReelCreatorModal';
 import DownloadSheet from './DownloadSheet';
-import { toggleLikeSong } from '../api/songsService';
+import TweakSongModal from './songCreation/TweakSongModal';
+import { toggleLikeSong, finalizeSong as finalizeSongApi } from '../api/songsService';
+import { getErrorMessage } from '../utils/errorHandler';
 
 const { width, height } = Dimensions.get('window');
 const ALBUM_SIZE = width - 64;
 const SPEEDS       = ['0.5x', '0.75x', '1.0x', '1.25x', '1.5x', '2.0x'];
 const SPEED_VALUES = [0.5,    0.75,    1.0,    1.25,    1.5,    2.0];
-import { SERVER_URL as FILE_BASE } from '../config/api';
+import { SERVER_URL as FILE_BASE, API_BASE_URL } from '../config/api';
 
 const fmt = (secs) => {
     const s = Math.max(0, Math.floor(secs));
@@ -53,6 +56,8 @@ const SongDetailScreen = () => {
     const progress = useProgress(500);
 
     const { canDownload, downloadsUsed, downloadLimit, plan, isBlocked, refreshAll } = useSubscription();
+    const accessToken = useSelector((state) => state.auth?.accessToken);
+    const authHeaders = accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined;
 
     const [isLiked, setIsLiked] = useState(song.isLiked ?? false);
     const [likesCount, setLikesCount] = useState(song.likesCount ?? song.likes ?? 0);
@@ -62,11 +67,14 @@ const SongDetailScreen = () => {
     const [upgradeModalVisible, setUpgradeModalVisible] = useState(false);
     const [downloadSheetVisible, setDownloadSheetVisible] = useState(false);
     const [reelModalVisible, setReelModalVisible] = useState(false);
+    const [tweakModalVisible, setTweakModalVisible] = useState(false);
     const [currentSong, setCurrentSong] = useState(song);
 
     // Always derived from currentSong so they update when reel creation / cover changes the song
+    // Streamed through the authenticated /stream endpoint (not a static file URL) — playback
+    // is unlimited for any logged-in user, but the raw audio is no longer publicly fetchable.
     const hasAudio  = !!currentSong.audioPath;
-    const audioUrl  = hasAudio ? `${FILE_BASE}${currentSong.audioPath}` : null;
+    const audioUrl  = hasAudio ? `${API_BASE_URL}/songs/${currentSong.id}/stream` : null;
     // Cache-buster uses updatedAt so React Native's Image doesn't serve a stale cached version
     const artworkUrl = currentSong.imagePath
         ? `${FILE_BASE}${currentSong.imagePath}?t=${new Date(currentSong.updatedAt ?? 0).getTime()}`
@@ -147,6 +155,7 @@ const SongDetailScreen = () => {
                 await TrackPlayer.add({
                     id: song.id ?? 'current',
                     url: audioUrl,
+                    headers: authHeaders,
                     title: song.title ?? 'Unknown',
                     artist: 'StrataSound AI',
                     artwork: artworkUrl ?? undefined,
@@ -202,6 +211,7 @@ const SongDetailScreen = () => {
             await TrackPlayer.add({
                 id: song.id ?? 'current',
                 url: audioUrl,
+                headers: authHeaders,
                 title: song.title ?? 'Unknown',
                 artist: 'StrataSound AI',
                 artwork: artworkUrl ?? undefined,
@@ -221,7 +231,7 @@ const SongDetailScreen = () => {
     };
 
     const handleReelPlay = async () => {
-        const reelUrl = `${FILE_BASE}${currentSong.reelPath}`;
+        const reelUrl = `${API_BASE_URL}/songs/${currentSong.id}/stream-reel`;
         if (activeTrack === 'reel' && isPlaying) {
             await TrackPlayer.pause();
             return;
@@ -235,6 +245,7 @@ const SongDetailScreen = () => {
         await TrackPlayer.add({
             id: `${song.id}-reel`,
             url: reelUrl,
+            headers: authHeaders,
             title: `${song.title ?? 'Unknown'} (Reel)`,
             artist: 'StrataSound AI',
             artwork: artworkUrl ?? undefined,
@@ -263,6 +274,48 @@ const SongDetailScreen = () => {
         }
     };
 
+    const handleTweaked = async (updatedSong) => {
+        setCurrentSong((prev) => ({ ...prev, ...updatedSong }));
+        setActiveTrack('song');
+        try {
+            await TrackPlayer.reset();
+            await TrackPlayer.add({
+                id: song.id ?? 'current',
+                // Cache-bust: same stream URL, but the underlying file just changed.
+                url: `${audioUrl}?t=${Date.now()}`,
+                headers: authHeaders,
+                title: updatedSong.title ?? song.title ?? 'Unknown',
+                artist: 'StrataSound AI',
+                artwork: artworkUrl ?? undefined,
+            });
+            setPlayerReady(true);
+        } catch (e) {
+            console.error('[Player] reload after tweak failed:', e);
+        }
+    };
+
+    const handleFinalize = () => {
+        Alert.alert(
+            'Finalize Song?',
+            'Once finalized, this song can no longer be tweaked or regenerated. This cannot be undone.',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Finalize',
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            const res = await finalizeSongApi(currentSong.id);
+                            setCurrentSong((prev) => ({ ...prev, ...(res?.data ?? res) }));
+                        } catch (e) {
+                            Alert.alert('Error', getErrorMessage(e, 'Could not finalize the song.'));
+                        }
+                    },
+                },
+            ],
+        );
+    };
+
     const handleDownload = () => {
         if (!hasAudio) {
             Alert.alert('No Audio', 'This song has no audio generated yet.');
@@ -289,11 +342,12 @@ const SongDetailScreen = () => {
 
     const handleShare = async () => {
         try {
+            // audioUrl now points at an authenticated streaming endpoint (Bearer token
+            // required), so it's meaningless to a recipient outside the app — share the
+            // song by name only rather than a link that will 401 for them.
             await Share.share({
                 title: song.title ?? 'Check out this song',
-                message: hasAudio
-                    ? `Listen to "${song.title ?? 'this song'}" — ${audioUrl}`
-                    : `Check out "${song.title ?? 'this song'}" on Astrata Music`,
+                message: `Check out "${song.title ?? 'this song'}" on Astrata Sounds`,
             });
         } catch (_) {}
     };
@@ -536,6 +590,37 @@ const SongDetailScreen = () => {
                     </TouchableOpacity>
                 )}
 
+                {/* Tweak / Finalize — draft-phase song editing, audio only */}
+                {hasAudio && (
+                    currentSong.isFinalized ? (
+                        <View style={styles.finalizedBadge}>
+                            <MaterialIcons name="lock" size={13} color="rgba(255,255,255,0.4)" />
+                            <Text style={styles.finalizedBadgeText}>Finalized — no more changes</Text>
+                        </View>
+                    ) : (
+                        <View style={styles.tweakRow}>
+                            <TouchableOpacity
+                                style={styles.tweakBtn}
+                                onPress={() => setTweakModalVisible(true)}
+                                activeOpacity={0.8}
+                            >
+                                <MaterialIcons name="auto-fix-high" size={15} color="#66cc33" />
+                                <Text style={styles.tweakBtnText}>
+                                    Tweak ({Math.max(0, 3 - (currentSong.freeTweaksUsed ?? 0))} free left)
+                                </Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={styles.finalizeBtn}
+                                onPress={handleFinalize}
+                                activeOpacity={0.8}
+                            >
+                                <MaterialIcons name="check-circle-outline" size={15} color="rgba(255,255,255,0.6)" />
+                                <Text style={styles.finalizeBtnText}>Finalize</Text>
+                            </TouchableOpacity>
+                        </View>
+                    )
+                )}
+
                 {/* Reel Card */}
                 {currentSong.reelPath && (
                     <View style={[styles.reelCard, activeTrack === 'reel' && styles.reelCardActive]}>
@@ -648,6 +733,13 @@ const SongDetailScreen = () => {
                 onClose={() => setDownloadSheetVisible(false)}
                 song={currentSong}
                 onDownloadComplete={refreshAll}
+            />
+
+            <TweakSongModal
+                visible={tweakModalVisible}
+                onClose={() => setTweakModalVisible(false)}
+                song={currentSong}
+                onTweaked={handleTweaked}
             />
         </View>
     );
@@ -836,6 +928,60 @@ const styles = StyleSheet.create({
     downloadLimitText: {
         flex: 1,
         color: '#FBBF24',
+        fontSize: 11,
+        fontFamily: 'Oswald-Regular',
+    },
+    tweakRow: {
+        flexDirection: 'row',
+        gap: 10,
+        marginBottom: 16,
+    },
+    tweakBtn: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 6,
+        backgroundColor: 'rgba(102,204,51,0.08)',
+        borderRadius: 10,
+        paddingVertical: 10,
+        borderWidth: 1,
+        borderColor: 'rgba(102,204,51,0.25)',
+    },
+    tweakBtnText: {
+        color: '#66cc33',
+        fontSize: 11,
+        fontFamily: 'Oswald-Regular',
+    },
+    finalizeBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 6,
+        paddingHorizontal: 14,
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.15)',
+    },
+    finalizeBtnText: {
+        color: 'rgba(255,255,255,0.6)',
+        fontSize: 11,
+        fontFamily: 'Oswald-Regular',
+    },
+    finalizedBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 6,
+        backgroundColor: 'rgba(255,255,255,0.05)',
+        borderRadius: 10,
+        padding: 10,
+        marginBottom: 16,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
+    },
+    finalizedBadgeText: {
+        color: 'rgba(255,255,255,0.4)',
         fontSize: 11,
         fontFamily: 'Oswald-Regular',
     },
