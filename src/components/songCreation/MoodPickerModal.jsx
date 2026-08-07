@@ -16,7 +16,7 @@ const MoodPickerModal = ({ visible, onSelect, onClose }) => (
                         <MaterialIcons name="close" size={18} color="rgba(255,255,255,0.5)" />
                     </TouchableOpacity>
                 </View>
-                <Text style={styles.moodHeaderSub}>The AI will write lyrics matching this feeling</Text>
+                <Text style={styles.moodHeaderSub}>Shapes both the lyrics and the song's tempo/energy</Text>
                 <View style={styles.moodGrid}>
                     {MOODS.map((m) => (
                         <TouchableOpacity

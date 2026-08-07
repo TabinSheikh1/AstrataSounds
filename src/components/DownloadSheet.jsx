@@ -1,14 +1,11 @@
 import React, { useState } from 'react';
 import {
     View, Text, StyleSheet, Modal, TouchableOpacity,
-    ActivityIndicator, Alert, Linking,
+    ActivityIndicator, Alert,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import { downloadSongFile, downloadReelFile } from '../api/songsService';
-import { getErrorMessage } from '../utils/errorHandler';
-
-import { SERVER_URL as FILE_BASE } from '../config/api';
+import { downloadSongToDevice } from '../utils/downloadSong';
 
 const fmt = (secs) => {
     const s = Math.max(0, Math.floor(secs));
@@ -19,36 +16,22 @@ const fmt = (secs) => {
 
 const DownloadSheet = ({ visible, onClose, song, onDownloadComplete }) => {
     const [downloading, setDownloading] = useState(null); // 'song' | 'reel' | null
+    const [progress, setProgress] = useState(0);
 
     const hasReel = !!song?.reelPath;
 
     const triggerDownload = async (type) => {
         setDownloading(type);
+        setProgress(0);
         try {
-            let filePath;
-            if (type === 'song') {
-                const res = await downloadSongFile(song.id);
-                filePath = res?.data?.audioPath ?? res?.audioPath;
-            } else {
-                const res = await downloadReelFile(song.id);
-                filePath = res?.data?.reelPath ?? res?.reelPath;
-            }
-
-            if (!filePath) throw new Error('No file path returned');
-
-            const url = `${FILE_BASE}${filePath}`;
-            const canOpen = await Linking.canOpenURL(url);
-            if (canOpen) {
-                await Linking.openURL(url);
-                onDownloadComplete?.();
-                onClose();
-            } else {
-                Alert.alert('Error', 'Cannot open the file URL.');
-            }
+            await downloadSongToDevice(song.id, type === 'reel' ? 'reel' : 'audio', setProgress);
+            onDownloadComplete?.();
+            onClose();
         } catch (e) {
-            Alert.alert('Download Failed', getErrorMessage(e, 'Download failed. Please try again.'));
+            Alert.alert('Download Failed', e?.userMessage || 'Download failed. Please try again.');
         } finally {
             setDownloading(null);
+            setProgress(0);
         }
     };
 
@@ -96,7 +79,10 @@ const DownloadSheet = ({ visible, onClose, song, onDownloadComplete }) => {
                                 <Text style={styles.optionSub}>Complete AI-generated track</Text>
                             </View>
                             {downloading === 'song' ? (
-                                <ActivityIndicator size="small" color="#66cc33" />
+                                <View style={styles.progressWrap}>
+                                    <ActivityIndicator size="small" color="#66cc33" />
+                                    <Text style={styles.progressText}>{Math.round(progress * 100)}%</Text>
+                                </View>
                             ) : (
                                 <MaterialIcons name="file-download" size={22} color="#66cc33" />
                             )}
@@ -125,7 +111,10 @@ const DownloadSheet = ({ visible, onClose, song, onDownloadComplete }) => {
                                     </Text>
                                 </View>
                                 {downloading === 'reel' ? (
-                                    <ActivityIndicator size="small" color="#047ec9" />
+                                    <View style={styles.progressWrap}>
+                                        <ActivityIndicator size="small" color="#047ec9" />
+                                        <Text style={styles.progressText}>{Math.round(progress * 100)}%</Text>
+                                    </View>
                                 ) : (
                                     <MaterialIcons name="file-download" size={22} color="#047ec9" />
                                 )}
@@ -217,6 +206,16 @@ const styles = StyleSheet.create({
     },
     optionSub: {
         color: 'rgba(255,255,255,0.4)',
+        fontFamily: 'Oswald-Regular',
+        fontSize: 12,
+    },
+    progressWrap: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+    },
+    progressText: {
+        color: 'rgba(255,255,255,0.6)',
         fontFamily: 'Oswald-Regular',
         fontSize: 12,
     },
