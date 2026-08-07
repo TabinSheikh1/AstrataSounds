@@ -28,6 +28,8 @@ import { getMyVibes, createVibe, deleteVibe } from '../api/vibesService';
 import { getMyPlaylists, createPlaylist, deletePlaylist, addSongToPlaylist, generatePlaylistBanner, uploadPlaylistBanner } from '../api/playlistsService';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { getErrorMessage } from '../utils/errorHandler';
+import { useSubscription } from '../hooks/useSubscription';
+import LimitReachedBanner from './LimitReachedBanner';
 
 const { width } = Dimensions.get('window');
 const MAIN_TABS = ['Songs', 'Vibe', 'Playlist'];
@@ -1346,6 +1348,7 @@ const CreatePlaylistModal = ({ visible, onClose, onCreate, userSongs }) => {
 // ─────────────────────────────────────────────
 const LibraryHomeScreen = () => {
   const navigation = useNavigation();
+  const { canCreateVibe, canCreatePlaylist, maxVibes, maxPlaylists } = useSubscription();
   const [selectedTab, setSelectedTab] = useState('Songs');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -1414,6 +1417,22 @@ const LibraryHomeScreen = () => {
   }, []);
 
   // ── Actions ──────────────────────────────────────────────
+  const handleNewVibePress = () => {
+    if (!canCreateVibe(vibes.length)) {
+      navigation.navigate('PricingScreen');
+      return;
+    }
+    setShowCreateVibe(true);
+  };
+
+  const handleNewPlaylistPress = () => {
+    if (!canCreatePlaylist(playlists.length)) {
+      navigation.navigate('PricingScreen');
+      return;
+    }
+    setShowCreatePlaylist(true);
+  };
+
   const handleDeleteSong = async (id) => {
     try {
       await deleteSong(id);
@@ -1538,7 +1557,7 @@ const LibraryHomeScreen = () => {
           <TouchableOpacity style={styles.refreshBtn} onPress={fetchVibes}>
             <MaterialIcons name="refresh" size={20} color="rgba(255,255,255,0.6)" />
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => setShowCreateVibe(true)} activeOpacity={0.85}>
+          <TouchableOpacity onPress={handleNewVibePress} activeOpacity={0.85}>
             <LinearGradient
               colors={['#66cc33', '#047ec9']}
               start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
@@ -1550,10 +1569,17 @@ const LibraryHomeScreen = () => {
         </View>
       </View>
 
+      {!canCreateVibe(vibes.length) && (
+        <LimitReachedBanner
+          message={`Vibe limit reached (${vibes.length}/${maxVibes}) · Upgrade for more`}
+          onPress={() => navigation.navigate('PricingScreen')}
+        />
+      )}
+
       {vibesLoading ? (
         <LoadingSkeleton />
       ) : vibes.length === 0 ? (
-        <VibesEmpty onCreate={() => setShowCreateVibe(true)} />
+        <VibesEmpty onCreate={handleNewVibePress} />
       ) : (
         <FlatList
           data={vibes}
@@ -1578,7 +1604,7 @@ const LibraryHomeScreen = () => {
           <TouchableOpacity style={styles.refreshBtn} onPress={fetchPlaylists}>
             <MaterialIcons name="refresh" size={20} color="rgba(255,255,255,0.6)" />
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => setShowCreatePlaylist(true)} activeOpacity={0.85}>
+          <TouchableOpacity onPress={handleNewPlaylistPress} activeOpacity={0.85}>
             <LinearGradient
               colors={['#047ec9', '#66cc33']}
               start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
@@ -1590,6 +1616,13 @@ const LibraryHomeScreen = () => {
         </View>
       </View>
 
+      {!canCreatePlaylist(playlists.length) && (
+        <LimitReachedBanner
+          message={`Playlist limit reached (${playlists.length}/${maxPlaylists}) · Upgrade for more`}
+          onPress={() => navigation.navigate('PricingScreen')}
+        />
+      )}
+
       {playlistsLoading ? (
         <LoadingSkeleton />
       ) : playlists.length === 0 ? (
@@ -1599,7 +1632,7 @@ const LibraryHomeScreen = () => {
           </View>
           <Text style={styles.emptyTitle}>No playlists yet</Text>
           <Text style={styles.emptySubtitle}>Curate your songs into playlists with AI-generated banners.</Text>
-          <TouchableOpacity onPress={() => setShowCreatePlaylist(true)} activeOpacity={0.85}>
+          <TouchableOpacity onPress={handleNewPlaylistPress} activeOpacity={0.85}>
             <LinearGradient colors={['#047ec9', '#66cc33']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.createBtn}>
               <Text style={styles.createBtnText}>CREATE PLAYLIST</Text>
             </LinearGradient>
