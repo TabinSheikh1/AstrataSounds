@@ -44,6 +44,18 @@ export const generateSongAudio = async (id, payload) => {
   return response.data;
 };
 
+// Free regeneration during drafting (capped server-side) — song audio only, no token cost.
+export const tweakSongAudio = async (id, payload) => {
+  const response = await API.post(`/songs/${id}/tweak`, payload);
+  return response.data;
+};
+
+// Locks the song — no more tweaks or regeneration afterward. Irreversible.
+export const finalizeSong = async (id) => {
+  const response = await API.post(`/songs/${id}/finalize`);
+  return response.data;
+};
+
 export const uploadSongImage = async (id, formData) => {
   const response = await API.post(`/songs/${id}/upload-image`, formData, {
     headers: { "Content-Type": "multipart/form-data" },
@@ -58,16 +70,6 @@ export const generateSongImage = async (id, payload) => {
 
 export const createReel = async (id, payload) => {
   const response = await API.post(`/songs/${id}/reel`, payload);
-  return response.data;
-};
-
-export const downloadSongFile = async (id) => {
-  const response = await API.post(`/songs/${id}/download`);
-  return response.data;
-};
-
-export const downloadReelFile = async (id) => {
-  const response = await API.post(`/songs/${id}/download-reel`);
   return response.data;
 };
 
