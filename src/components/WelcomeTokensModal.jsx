@@ -3,6 +3,7 @@ import {
     View,
     Text,
     TouchableOpacity,
+    Pressable,
     StyleSheet,
     Modal,
     Animated,
@@ -23,33 +24,40 @@ const WelcomeTokensModal = ({ isVisible }) => {
     const glowPulse = useRef(new Animated.Value(0.85)).current;
 
     useEffect(() => {
-        if (isVisible) {
-            Animated.parallel([
-                Animated.spring(scaleAnim, {
-                    toValue: 1,
-                    tension: 60,
-                    friction: 7,
-                    useNativeDriver: true,
-                }),
-                Animated.timing(opacityAnim, {
-                    toValue: 1,
-                    duration: 300,
-                    easing: Easing.out(Easing.cubic),
-                    useNativeDriver: true,
-                }),
-            ]).start();
-
-            Animated.loop(
-                Animated.sequence([
-                    Animated.timing(glowPulse, { toValue: 1, duration: 1100, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-                    Animated.timing(glowPulse, { toValue: 0.85, duration: 1100, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-                ]),
-            ).start();
-        } else {
+        if (!isVisible) {
             scaleAnim.setValue(0.7);
             opacityAnim.setValue(0);
         }
     }, [isVisible]);
+
+    // Started from the Modal's onShow (fires once the native modal has actually
+    // finished presenting), not from this effect firing on isVisible — starting a
+    // useNativeDriver animation the instant `visible` flips true can race the
+    // native presentation on physical devices and get silently dropped, leaving
+    // the card stuck at opacity 0 behind the (already-visible) dark backdrop.
+    const handleShow = () => {
+        Animated.parallel([
+            Animated.spring(scaleAnim, {
+                toValue: 1,
+                tension: 60,
+                friction: 7,
+                useNativeDriver: true,
+            }),
+            Animated.timing(opacityAnim, {
+                toValue: 1,
+                duration: 300,
+                easing: Easing.out(Easing.cubic),
+                useNativeDriver: true,
+            }),
+        ]).start();
+
+        Animated.loop(
+            Animated.sequence([
+                Animated.timing(glowPulse, { toValue: 1, duration: 1100, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+                Animated.timing(glowPulse, { toValue: 0.85, duration: 1100, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+            ]),
+        ).start();
+    };
 
     const handleDismiss = () => {
         dispatch(dismissWelcomeModal());
@@ -68,16 +76,17 @@ const WelcomeTokensModal = ({ isVisible }) => {
             transparent
             visible={isVisible}
             onRequestClose={handleDismiss}
+            onShow={handleShow}
             statusBarTranslucent
         >
-            <View style={styles.overlay}>
+            <Pressable style={styles.overlay} onPress={handleDismiss}>
                 <Animated.View
                     style={[
                         styles.cardWrap,
                         { opacity: opacityAnim, transform: [{ scale: scaleAnim }] },
                     ]}
                 >
-                    <View style={styles.card}>
+                    <Pressable style={styles.card} onPress={() => {}}>
                     <Animated.View style={[styles.iconGlow, { opacity: glowPulse }]} />
                     <View style={styles.cardInner}>
                         <LinearGradient
@@ -142,9 +151,9 @@ const WelcomeTokensModal = ({ isVisible }) => {
                             <Text style={styles.secondaryButtonText}>View Subscription Plans</Text>
                         </TouchableOpacity>
                     </View>
-                    </View>
+                    </Pressable>
                 </Animated.View>
-            </View>
+            </Pressable>
         </Modal>
     );
 };

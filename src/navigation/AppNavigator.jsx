@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
+import { View, StyleSheet } from 'react-native';
 import { useSelector } from 'react-redux';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useSubscription } from '../hooks/useSubscription';
 import WelcomeTokensModal from '../components/WelcomeTokensModal';
+import GlobalTabBar from './GlobalTabBar';
 
 import SplashScreen from '../components/SplashScreen';
 import ContentReviewScreen from '../components/ContentReviewScreen';
@@ -103,11 +105,19 @@ const AppNavigator = () => {
   }
 
   return (
-    <>
-      <AppStack />
+    <View style={styles.root}>
+      <View style={styles.stackArea}>
+        <AppStack />
+      </View>
+      <GlobalTabBar />
       <WelcomeTokensModal isVisible={showWelcomeModal} />
-    </>
+    </View>
   );
 };
+
+const styles = StyleSheet.create({
+  root: { flex: 1 },
+  stackArea: { flex: 1 },
+});
 
 export default AppNavigator;

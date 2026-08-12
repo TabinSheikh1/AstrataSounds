@@ -8,6 +8,8 @@ import {
 } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import LinearGradient from 'react-native-linear-gradient';
+import { navigationRef } from '../../App';
+import { tabBarStore, useActiveTabRoute } from './tabBarStore';
 
 const TABS = [
   { route: 'HomeScreen', label: 'Home', icon: 'home' },
@@ -18,11 +20,27 @@ const TABS = [
 
 const ICON_SIZE = 22;
 
-const CustomBottomTabBar = ({ state, navigation }) => {
-  const currentRoute = state.routes[state.index].name;
+// Rendered once at the app root (see AppNavigator) so it stays visible across
+// every stack screen, not just the 4 screens inside MainTabNavigator.
+const GlobalTabBar = () => {
+  const activeRoute = useActiveTabRoute();
+
+  const handlePress = (route) => {
+    if (navigationRef.isReady()) {
+      // These 4 tabs live inside MainApp's own Tab.Navigator, not as top-level
+      // AppStack screens — from a sibling screen (e.g. LeaderBoardScreen),
+      // navigate(route) alone fails with "screen does not exist" because
+      // AppStack's Stack.Navigator has no route by that name. Targeting
+      // MainApp explicitly drills into its nested tab correctly from anywhere.
+      navigationRef.navigate('MainApp', { screen: route });
+    }
+  };
 
   return (
-    <View style={styles.wrapper}>
+    <View
+      style={styles.wrapper}
+      onLayout={(e) => tabBarStore.setTabBarHeight(e.nativeEvent.layout.height)}
+    >
       {/* Thin accent line on top */}
       <LinearGradient
         colors={['#66cc33', '#047ec9', '#66cc33']}
@@ -33,17 +51,15 @@ const CustomBottomTabBar = ({ state, navigation }) => {
 
       <View style={styles.bar}>
         {TABS.map((tab) => {
-          const active = currentRoute === tab.route;
+          const active = activeRoute === tab.route;
 
           return (
             <TouchableOpacity
               key={tab.route}
               style={styles.tab}
-              onPress={() => navigation.navigate(tab.route)}
+              onPress={() => handlePress(tab.route)}
               activeOpacity={0.7}
             >
-              {/* Icon area */}
-
               <View style={[styles.iconWrap, active && styles.iconWrapActive]}>
                 <MaterialIcons
                   name={tab.icon}
@@ -52,8 +68,6 @@ const CustomBottomTabBar = ({ state, navigation }) => {
                 />
               </View>
 
-
-              {/* Label */}
               <Text
                 style={[
                   styles.label,
@@ -64,7 +78,6 @@ const CustomBottomTabBar = ({ state, navigation }) => {
                 {tab.label}
               </Text>
 
-              {/* Active indicator dot */}
               {active && <View style={styles.dot} />}
             </TouchableOpacity>
           );
@@ -79,7 +92,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#0a0e19',
     borderTopWidth: 1,
     borderTopColor: 'rgba(255,255,255,0.06)',
-    // React Navigation positions this at the bottom — no absolute needed
   },
 
   topAccent: {
@@ -101,7 +113,6 @@ const styles = StyleSheet.create({
     paddingBottom: 4,
   },
 
-  // Shared icon container — same dimensions for all tabs
   iconWrap: {
     width: 42,
     height: 32,
@@ -137,4 +148,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default CustomBottomTabBar;
+export default GlobalTabBar;

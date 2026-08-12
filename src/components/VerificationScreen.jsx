@@ -13,6 +13,8 @@ import {
     StatusBar,
     Alert,
     ActivityIndicator,
+    Keyboard,
+    TouchableWithoutFeedback,
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import GradientBackground from './GradientBackground';
@@ -102,9 +104,10 @@ const VerificationScreen = ({ navigation, route }) => {
 
             <KeyboardAvoidingView
                 style={styles.container}
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
                 keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
             >
+                <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
                 <ScrollView
                     contentContainerStyle={styles.scrollContent}
                     keyboardShouldPersistTaps="handled"
@@ -183,6 +186,7 @@ const VerificationScreen = ({ navigation, route }) => {
                         resizeMode="contain"
                     />
                 </ScrollView>
+                </TouchableWithoutFeedback>
             </KeyboardAvoidingView>
         </GradientBackground>
     );

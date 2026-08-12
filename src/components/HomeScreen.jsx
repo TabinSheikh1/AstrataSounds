@@ -64,6 +64,23 @@ const SectionHeader = ({ title, onSeeAll }) => (
   </View>
 );
 
+const VibeCTA = ({ onPress }) => (
+  <TouchableOpacity style={s.vibeCta} onPress={onPress} activeOpacity={0.85}>
+    <LinearGradient
+      colors={['#66cc33', '#047ec9']}
+      start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+      style={s.vibeCtaIconWrap}
+    >
+      <MaterialIcons name="auto-fix-high" size={20} color="#fff" />
+    </LinearGradient>
+    <View style={s.vibeCtaText}>
+      <Text style={s.vibeCtaTitle}>Set the Mood</Text>
+      <Text style={s.vibeCtaSub}>Create a Vibe preset to guide your next song</Text>
+    </View>
+    <MaterialIcons name="arrow-forward-ios" size={14} color="rgba(255,255,255,0.4)" />
+  </TouchableOpacity>
+);
+
 const SongCard = ({ item, onPress }) => (
   <TouchableOpacity style={s.songCard} onPress={onPress} activeOpacity={0.88}>
     {item.imagePath ? (
@@ -330,6 +347,10 @@ const HomeScreen = () => {
           onSeeAll={() => navigation.navigate('HomeSongsScreen')}
         />
 
+        <VibeCTA
+          onPress={() => navigation.navigate('LibraryHomeScreen', { initialTab: 'Vibe', autoCreateVibe: true })}
+        />
+
         {songsLoading ? (
           <ActivityIndicator color="#66cc33" size="large" style={s.loader} />
         ) : songs.length === 0 ? (
@@ -593,6 +614,40 @@ const s = StyleSheet.create({
     color: '#66cc33',
     fontSize: 13,
     fontFamily: 'Oswald-Regular',
+  },
+
+  // ── Vibe CTA ─────────────────────────────────────────────
+  vibeCta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+    marginHorizontal: 20,
+    marginBottom: 20,
+    padding: 12,
+  },
+  vibeCtaIconWrap: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  vibeCtaText: { flex: 1 },
+  vibeCtaTitle: {
+    color: '#fff',
+    fontSize: 14,
+    fontFamily: 'Oswald-Bold',
+    letterSpacing: 0.3,
+  },
+  vibeCtaSub: {
+    color: 'rgba(255,255,255,0.5)',
+    fontSize: 11,
+    fontFamily: 'Oswald-Regular',
+    marginTop: 2,
   },
 
   // ── Horizontal list ────────────────────────────────────────

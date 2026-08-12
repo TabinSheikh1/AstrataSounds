@@ -68,7 +68,7 @@ const CoverTab = ({ coverMode, setCoverMode, imagePrompt, setImagePrompt, upload
                 ) : (
                     <View style={styles.aiCoverNote}>
                         <MaterialIcons name="info-outline" size={14} color="rgba(255,255,255,0.35)" />
-                        <Text style={styles.aiCoverNoteText}>Cover is generated after song creation using DALL-E 3 · 1024×1024</Text>
+                        <Text style={styles.aiCoverNoteText}>Cover is generated after song creation using AI · 1024×1024</Text>
                     </View>
                 )}
             </>

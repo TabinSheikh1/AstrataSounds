@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { Linking } from 'react-native';
 import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import AppNavigator from './src/navigation/AppNavigator';
+import { tabBarStore } from './src/navigation/tabBarStore';
 import { setupPlayer } from './src/player/setupPlayer';
 import { Provider } from 'react-redux';
 import { store, persistor } from './src/store/store';
@@ -68,7 +69,14 @@ const App = () => {
     return () => sub.remove();
   }, []);
 
+  const handleStateChange = () => {
+    if (navigationRef.isReady()) {
+      tabBarStore.setActiveRoute(navigationRef.getCurrentRoute()?.name ?? null);
+    }
+  };
+
   const handleNavReady = () => {
+    handleStateChange();
     if (pendingUrl.current) {
       resolveDeepLink(pendingUrl.current);
       pendingUrl.current = null;
@@ -78,7 +86,11 @@ const App = () => {
   return (
     <Provider store={store}>
       <PersistGate loading={null} persistor={persistor}>
-        <NavigationContainer ref={navigationRef} onReady={handleNavReady}>
+        <NavigationContainer
+          ref={navigationRef}
+          onReady={handleNavReady}
+          onStateChange={handleStateChange}
+        >
           <AppNavigator />
         </NavigationContainer>
       </PersistGate>

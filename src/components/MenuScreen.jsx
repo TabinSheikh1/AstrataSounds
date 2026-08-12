@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import {
     View,
     Text,
@@ -11,12 +11,12 @@ import {
     Platform,
     Animated,
     Easing,
-    Modal,
     Dimensions,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import { useTabBarHeight } from '../navigation/tabBarStore';
 import {
     Share2, MessageSquare, Mail, HelpCircle,
     FileText, ShieldCheck, RefreshCw, Trophy, Award,
@@ -27,6 +27,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { logoutUser } from '../store/actions/authActions';
 import { SERVER_URL as BASE_URL } from '../config/api';
 const DRAWER_WIDTH = Dimensions.get('window').width * 0.85;
+const SCREEN_HEIGHT = Dimensions.get('window').height;
 
 const buildAvatarUri = (profilePicture) => {
     if (!profilePicture) return null;
@@ -53,6 +54,13 @@ const MenuScreen = ({ visible, onClose }) => {
     const navigation = useNavigation();
     const user = useSelector((state) => state.auth.user);
 
+    const tabBarHeight = useTabBarHeight();
+    const overlayHeight = SCREEN_HEIGHT - tabBarHeight;
+
+    // Kept mounted through the close animation, then unmounted so it stops
+    // blocking touches/covering the tab bar once fully closed.
+    const [isMounted, setIsMounted] = useState(visible);
+
     // Drawer slide + backdrop animations
     const slideX = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
     const backdropOpacity = useRef(new Animated.Value(0)).current;
@@ -77,6 +85,8 @@ const MenuScreen = ({ visible, onClose }) => {
         const contentAnims = [headerAnim, profileAnim, card1Anim, card2Anim, card3Anim, footerAnim];
 
         if (visible) {
+            setIsMounted(true);
+
             // Reset content animations so they replay on each open
             contentAnims.forEach(a => a.setValue(0));
             slideAnims.forEach(s => s.setValue(20));
@@ -98,9 +108,11 @@ const MenuScreen = ({ visible, onClose }) => {
             Animated.parallel([
                 Animated.timing(slideX, { toValue: -DRAWER_WIDTH, duration: 280, easing: Easing.in(Easing.cubic), useNativeDriver: true }),
                 Animated.timing(backdropOpacity, { toValue: 0, duration: 250, useNativeDriver: true }),
-            ]).start();
+            ]).start(() => setIsMounted(false));
         }
     }, [visible]);
+
+    if (!isMounted) return null;
 
     const navigateTo = (screen) => {
         onClose();
@@ -118,13 +130,7 @@ const MenuScreen = ({ visible, onClose }) => {
     });
 
     return (
-        <Modal
-            visible={visible}
-            transparent
-            animationType="none"
-            onRequestClose={onClose}
-            statusBarTranslucent
-        >
+        <View style={[styles.overlay, { height: overlayHeight }]}>
             {/* Backdrop — tapping it closes the drawer */}
             <TouchableWithoutFeedback onPress={onClose}>
                 <Animated.View style={[styles.backdrop, { opacity: backdropOpacity }]} />
@@ -294,7 +300,7 @@ const MenuScreen = ({ visible, onClose }) => {
                     </ScrollView>
                 </ImageBackground>
             </Animated.View>
-        </Modal>
+        </View>
     );
 };
 
@@ -302,6 +308,16 @@ export default MenuScreen;
 
 const styles = StyleSheet.create({
     // ── Drawer shell ──────────────────────────────────────────
+    // Stops above the tab bar (see overlayHeight) instead of using RN's Modal,
+    // which always renders in a separate native layer above everything, tab bar included.
+    overlay: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 999,
+        elevation: 999,
+    },
     backdrop: {
         flex: 1,
         backgroundColor: 'rgba(0,0,0,0.55)',
@@ -313,9 +329,11 @@ const styles = StyleSheet.create({
         bottom: 0,
         width: DRAWER_WIDTH,
         overflow: 'hidden',
+        backgroundColor: '#0d1117',
     },
     background: {
         flex: 1,
+        backgroundColor: '#0d1117',
     },
 
     // ── Header ────────────────────────────────────────────────

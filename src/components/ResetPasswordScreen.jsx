@@ -13,6 +13,8 @@ import {
     StatusBar,
     Alert,
     ActivityIndicator,
+    Keyboard,
+    TouchableWithoutFeedback,
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import GradientBackground from './GradientBackground';
@@ -111,9 +113,10 @@ const ResetPasswordScreen = ({ route }) => {
 
             <KeyboardAvoidingView
                 style={styles.container}
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
                 keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
             >
+                <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
                 <ScrollView
                     contentContainerStyle={styles.scrollContent}
                     keyboardShouldPersistTaps="handled"
@@ -193,6 +196,7 @@ const ResetPasswordScreen = ({ route }) => {
                         resizeMode="contain"
                     />
                 </ScrollView>
+                </TouchableWithoutFeedback>
             </KeyboardAvoidingView>
 
             <SuccessModal

@@ -22,7 +22,7 @@ import {
 import LinearGradient from 'react-native-linear-gradient';
 import Header from './Header';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { getMySongs, deleteSong, toggleLikeSong } from '../api/songsService';
 import { getMyVibes, createVibe, deleteVibe } from '../api/vibesService';
 import { getMyPlaylists, createPlaylist, deletePlaylist, addSongToPlaylist, generatePlaylistBanner, uploadPlaylistBanner } from '../api/playlistsService';
@@ -1348,9 +1348,14 @@ const CreatePlaylistModal = ({ visible, onClose, onCreate, userSongs }) => {
 // ─────────────────────────────────────────────
 const LibraryHomeScreen = () => {
   const navigation = useNavigation();
+  const route = useRoute();
   const { canCreateVibe, canCreatePlaylist, maxVibes, maxPlaylists } = useSubscription();
   const [selectedTab, setSelectedTab] = useState('Songs');
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Set by HomeScreen's Discover-Vibes shortcut (navigation.navigate('LibraryHomeScreen', { initialTab: 'Vibe', autoCreateVibe: true })).
+  // A ref (not state) survives across the fetchVibes closure without retriggering effects.
+  const pendingAutoCreateVibe = useRef(false);
 
   // Songs state
   const [songs, setSongs] = useState([]);
@@ -1388,13 +1393,23 @@ const LibraryHomeScreen = () => {
     setVibesLoading(true);
     try {
       const data = await getMyVibes();
-      setVibes(Array.isArray(data) ? data : data?.data ?? []);
+      const list = Array.isArray(data) ? data : data?.data ?? [];
+      setVibes(list);
+
+      if (pendingAutoCreateVibe.current) {
+        pendingAutoCreateVibe.current = false;
+        if (!canCreateVibe(list.length)) {
+          navigation.navigate('PricingScreen');
+        } else {
+          setShowCreateVibe(true);
+        }
+      }
     } catch (err) {
       console.error('fetchVibes:', err);
     } finally {
       setVibesLoading(false);
     }
-  }, []);
+  }, [canCreateVibe, navigation]);
 
   const fetchPlaylists = useCallback(async () => {
     setPlaylistsLoading(true);
@@ -1415,6 +1430,22 @@ const LibraryHomeScreen = () => {
     fetchVibes();
     fetchPlaylists();
   }, []);
+
+  // Handles the Discover-Vibes shortcut from HomeScreen. Re-fetches so the
+  // limit check (canCreateVibe) uses a fresh count rather than this tab's
+  // possibly-stale mounted state — this screen stays mounted across visits.
+  useEffect(() => {
+    if (route.params?.initialTab) {
+      const index = MAIN_TABS.indexOf(route.params.initialTab);
+      if (index !== -1) handleTabPress(route.params.initialTab, index);
+    }
+    if (route.params?.autoCreateVibe) {
+      pendingAutoCreateVibe.current = true;
+      fetchVibes();
+      navigation.setParams({ autoCreateVibe: undefined, initialTab: undefined });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [route.params?.autoCreateVibe, route.params?.initialTab]);
 
   // ── Actions ──────────────────────────────────────────────
   const handleNewVibePress = () => {

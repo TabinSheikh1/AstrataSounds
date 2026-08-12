@@ -43,7 +43,7 @@ const formatCountdown = (endsAt) => {
 };
 
 // ── Ranked entry row ─────────────────────────────────────────
-const EntryRow = ({ entry, rankIndex, isActive, onVote, onPress }) => {
+const EntryRow = ({ entry, rankIndex, isActive, onVote, onPress, onPressCreator }) => {
   const medalColor = rankIndex === 0 ? '#FFD700' : rankIndex === 1 ? '#C0C0C0' : rankIndex === 2 ? '#CD7F32' : null;
 
   return (
@@ -62,9 +62,11 @@ const EntryRow = ({ entry, rankIndex, isActive, onVote, onPress }) => {
 
       <View style={s.entryInfo}>
         <Text style={s.entryTitle} numberOfLines={1}>{entry.title}</Text>
-        <Text style={s.entryCreator} numberOfLines={1}>
-          {entry.firstName} {entry.lastName}{entry.isOwnEntry ? ' · You' : ''}
-        </Text>
+        <TouchableOpacity onPress={onPressCreator} hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}>
+          <Text style={s.entryCreator} numberOfLines={1}>
+            {entry.firstName} {entry.lastName}{entry.isOwnEntry ? ' · You' : ''}
+          </Text>
+        </TouchableOpacity>
       </View>
 
       {isActive && !entry.isOwnEntry ? (
@@ -292,7 +294,15 @@ const CompetitionsScreen = () => {
               rankIndex={index}
               isActive={isActive}
               onVote={handleVote}
-              onPress={() => navigation.navigate('UserProfileScreen', { userId: item.userId, firstName: item.firstName, lastName: item.lastName })}
+              onPress={() => navigation.navigate('SongDetailScreen', {
+                song: {
+                  id: item.songId,
+                  title: item.title,
+                  imagePath: item.imagePath,
+                  audioPath: item.audioPath,
+                },
+              })}
+              onPressCreator={() => navigation.navigate('UserProfileScreen', { userId: item.userId, firstName: item.firstName, lastName: item.lastName })}
             />
           )}
           contentContainerStyle={s.listContent}
