@@ -157,7 +157,7 @@ const SongDetailScreen = () => {
                     url: audioUrl,
                     headers: authHeaders,
                     title: song.title ?? 'Unknown',
-                    artist: 'StrataSound AI',
+                    artist: 'StrataSound Music AI',
                     artwork: artworkUrl ?? undefined,
                 });
                 if (active) setPlayerReady(true);
@@ -213,7 +213,7 @@ const SongDetailScreen = () => {
                 url: audioUrl,
                 headers: authHeaders,
                 title: song.title ?? 'Unknown',
-                artist: 'StrataSound AI',
+                artist: 'StrataSound Music AI',
                 artwork: artworkUrl ?? undefined,
             });
             await TrackPlayer.setRate(SPEED_VALUES[speedIdx]);
@@ -247,7 +247,7 @@ const SongDetailScreen = () => {
             url: reelUrl,
             headers: authHeaders,
             title: `${song.title ?? 'Unknown'} (Reel)`,
-            artist: 'StrataSound AI',
+            artist: 'StrataSound Music AI',
             artwork: artworkUrl ?? undefined,
         });
         await TrackPlayer.setRate(1.0);
@@ -285,7 +285,7 @@ const SongDetailScreen = () => {
                 url: `${audioUrl}?t=${Date.now()}`,
                 headers: authHeaders,
                 title: updatedSong.title ?? song.title ?? 'Unknown',
-                artist: 'StrataSound AI',
+                artist: 'StrataSound Music AI',
                 artwork: artworkUrl ?? undefined,
             });
             setPlayerReady(true);
@@ -347,7 +347,7 @@ const SongDetailScreen = () => {
             // song by name only rather than a link that will 401 for them.
             await Share.share({
                 title: song.title ?? 'Check out this song',
-                message: `Check out "${song.title ?? 'this song'}" on Astrata Sounds`,
+                message: `Check out "${song.title ?? 'this song'}" on StrataSound Music`,
             });
         } catch (_) {}
     };
@@ -423,7 +423,7 @@ const SongDetailScreen = () => {
                     <View style={{ flex: 1, marginRight: 12 }}>
                         <Text style={styles.songTitle} numberOfLines={1}>{song.title ?? 'Unknown'}</Text>
                         <Text style={styles.songArtist}>
-                            {song.description ? song.description : 'StrataSound AI'}
+                            {song.description ? song.description : 'StrataSound Music AI'}
                         </Text>
                     </View>
                     <Animated.View style={{ transform: [{ scale: likeScale }] }}>

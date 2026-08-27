@@ -33,7 +33,7 @@ const ContentReviewScreen = ({ onContinue }) => {
             <MaterialCommunityIcons name="apple" size={30} color="#0a2540" />
           </View>
 
-          <Text style={styles.eyebrow}>ASTRATASOUNDS TRUST &amp; SAFETY</Text>
+          <Text style={styles.eyebrow}>STRATASOUND MUSIC TRUST &amp; SAFETY</Text>
           <Text style={styles.title}>Your Content Is Under Review</Text>
 
           <Text style={styles.body}>
@@ -62,7 +62,7 @@ const ContentReviewScreen = ({ onContinue }) => {
         </View>
 
         <Text style={styles.signature}>
-          AstrataSounds Trust &amp; Safety Team
+          StrataSound Music Trust &amp; Safety Team
         </Text>
       </View>
     </LinearGradient>

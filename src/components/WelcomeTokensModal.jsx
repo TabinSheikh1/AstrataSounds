@@ -113,7 +113,7 @@ const WelcomeTokensModal = ({ isVisible }) => {
                             </View>
                         </View>
 
-                        <Text style={styles.title}>Welcome to Astrata Sounds!</Text>
+                        <Text style={styles.title}>Welcome to StrataSound Music!</Text>
                         <Text style={styles.subtitle}>
                             You've been gifted a free trial to start creating right away.
                         </Text>

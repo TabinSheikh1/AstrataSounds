@@ -24,24 +24,42 @@ const TweakSongModal = ({ visible, onClose, song, onTweaked }) => {
     const [showMoodPicker, setShowMoodPicker] = useState(false);
     const [submitting, setSubmitting] = useState(false);
 
+    // Lyrics: prefilled with the song's current lyrics so the user can edit them directly.
+    // Toggling "Improve with AI" hands the lyrics over to the AI instead (using the mood
+    // below + these instructions) rather than saving the edited text as-is.
+    const [lyricsText, setLyricsText] = useState('');
+    const [aiRewriteLyrics, setAiRewriteLyrics] = useState(false);
+    const [lyricsPrompt, setLyricsPrompt] = useState('');
+
     const tweaksUsed = song?.freeTweaksUsed ?? 0;
     const tweaksLeft = Math.max(0, FREE_TWEAK_LIMIT - tweaksUsed);
 
     // Fresh form every time it's opened — there's nothing to prefill from (the original
-    // category/mood/prompt used to generate the song aren't persisted on the Song entity).
-    // Lyrics are never part of this form — the backend always reuses the song's saved lyrics.
+    // category/mood/prompt used to generate the song aren't persisted on the Song entity) —
+    // except the lyrics, which come straight from the song so they're ready to edit.
     useEffect(() => {
         if (visible) {
             setCategory(null);
             setStyleText('');
             setSelectedMood(null);
             setSelectedLanguage('english');
+            setLyricsText(song?.lyrics ?? '');
+            setAiRewriteLyrics(false);
+            setLyricsPrompt('');
         }
-    }, [visible]);
+    }, [visible, song]);
 
     const handleSubmit = async () => {
         if (!category) {
             Alert.alert('Genre required', 'Pick a genre for this tweak.');
+            return;
+        }
+        if (aiRewriteLyrics && !selectedMood) {
+            Alert.alert('Mood required', 'Pick a mood below so the AI knows how to rewrite the lyrics.');
+            return;
+        }
+        if (!aiRewriteLyrics && !lyricsText.trim()) {
+            Alert.alert('Lyrics required', 'Lyrics cannot be empty — write something or use "Improve with AI".');
             return;
         }
 
@@ -52,6 +70,9 @@ const TweakSongModal = ({ visible, onClose, song, onTweaked }) => {
                 language: selectedLanguage,
                 ...(selectedMood ? { mood: selectedMood } : {}),
                 prompt: styleText.trim() || 'A beautiful well-crafted song',
+                ...(aiRewriteLyrics
+                    ? { lyricsMode: 'ai', ...(lyricsPrompt.trim() ? { lyricsPrompt: lyricsPrompt.trim() } : {}) }
+                    : { lyricsMode: 'manual', lyrics: lyricsText.trim() }),
             };
             const res = await tweakSongAudio(song.id, payload);
             onTweaked?.(res?.data ?? res);
@@ -76,7 +97,7 @@ const TweakSongModal = ({ visible, onClose, song, onTweaked }) => {
                         <View style={{ flex: 1 }}>
                             <Text style={styles.title}>Tweak Song</Text>
                             <Text style={styles.subtitle}>
-                                {tweaksLeft} of {FREE_TWEAK_LIMIT} free tweaks left — lyrics and cover art stay as-is, only the music changes
+                                {tweaksLeft} of {FREE_TWEAK_LIMIT} free tweaks left — cover art stays as-is; edit the lyrics below or let AI rewrite them
                             </Text>
                         </View>
                         <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
@@ -105,7 +126,45 @@ const TweakSongModal = ({ visible, onClose, song, onTweaked }) => {
                             onChangeText={setStyleText}
                         />
 
-                        <Text style={styles.fieldLabel}>Mood (affects tempo & energy)</Text>
+                        <View style={styles.lyricsHeaderRow}>
+                            <Text style={styles.fieldLabel}>Lyrics</Text>
+                            <TouchableOpacity onPress={() => setAiRewriteLyrics((v) => !v)} style={styles.aiToggleBtn} activeOpacity={0.8}>
+                                <MaterialIcons name="auto-awesome" size={13} color={aiRewriteLyrics ? '#66cc33' : 'rgba(255,255,255,0.4)'} />
+                                <Text style={[styles.aiToggleBtnText, aiRewriteLyrics && styles.aiToggleBtnTextActive]}>
+                                    {aiRewriteLyrics ? 'Improving with AI' : 'Improve with AI'}
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
+                        <TextInput
+                            style={[styles.textArea, { minHeight: 110 }, aiRewriteLyrics && styles.textAreaDisabled]}
+                            placeholder="Song lyrics..."
+                            placeholderTextColor="rgba(255,255,255,0.4)"
+                            multiline
+                            maxLength={3500}
+                            value={lyricsText}
+                            onChangeText={setLyricsText}
+                            editable={!aiRewriteLyrics}
+                        />
+                        {aiRewriteLyrics && (
+                            <>
+                                <Text style={styles.aiRewriteHint}>
+                                    AI will rewrite the lyrics above using the mood you pick below.
+                                </Text>
+                                <TextInput
+                                    style={[styles.textArea, { minHeight: 70, marginTop: 8 }]}
+                                    placeholder="Describe how you'd like the lyrics improved (optional)..."
+                                    placeholderTextColor="rgba(255,255,255,0.4)"
+                                    multiline
+                                    maxLength={500}
+                                    value={lyricsPrompt}
+                                    onChangeText={setLyricsPrompt}
+                                />
+                            </>
+                        )}
+
+                        <Text style={styles.fieldLabel}>
+                            Mood ({aiRewriteLyrics ? 'shapes the rewritten lyrics + ' : ''}affects tempo & energy)
+                        </Text>
                         {selectedMood ? (
                             <View style={styles.moodSelected}>
                                 <MaterialIcons name="mood" size={16} color="#66cc33" />
@@ -278,6 +337,43 @@ const styles = StyleSheet.create({
         fontSize: 13,
         minHeight: 70,
         textAlignVertical: 'top',
+    },
+    textAreaDisabled: {
+        opacity: 0.4,
+    },
+    lyricsHeaderRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginTop: 16,
+        marginBottom: 8,
+    },
+    aiToggleBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 5,
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+        borderRadius: 10,
+        backgroundColor: 'rgba(255,255,255,0.05)',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.08)',
+    },
+    aiToggleBtnText: {
+        color: 'rgba(255,255,255,0.5)',
+        fontFamily: 'Oswald-Regular',
+        fontSize: 10,
+        textTransform: 'uppercase',
+        letterSpacing: 0.3,
+    },
+    aiToggleBtnTextActive: {
+        color: '#66cc33',
+    },
+    aiRewriteHint: {
+        color: 'rgba(255,255,255,0.4)',
+        fontFamily: 'Oswald-Regular',
+        fontSize: 10,
+        marginTop: 6,
     },
     moodSelected: {
         flexDirection: 'row',

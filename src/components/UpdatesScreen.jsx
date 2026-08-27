@@ -75,7 +75,7 @@ const UpdatesScreen = () => {
             <MaterialIcons name="system-update" size={32} color="#66cc33" />
           </View>
           <View style={s.versionInfo}>
-            <Text style={s.versionTitle}>AstrataSound</Text>
+            <Text style={s.versionTitle}>StrataSound Music</Text>
             <Text style={s.versionNum}>Version {APP_VERSION} (Build {BUILD_NUMBER})</Text>
           </View>
           <View style={s.upToDateBadge}>

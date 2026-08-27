@@ -358,6 +358,40 @@ export const styles = StyleSheet.create({
         marginTop: 1,
     },
 
+    // ── Song length buttons ─────────────────────────────────────
+    lengthRow: { flexDirection: 'row', gap: 10, marginBottom: 14 },
+    lengthBtn: {
+        flex: 1,
+        alignItems: 'center',
+        backgroundColor: 'rgba(255,255,255,0.08)',
+        borderRadius: 12,
+        paddingVertical: 10,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.15)',
+    },
+    lengthBtnActive: {
+        backgroundColor: '#66cc33',
+        borderColor: '#66cc33',
+        shadowColor: '#66cc33',
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.4,
+        shadowRadius: 6,
+        elevation: 5,
+    },
+    lengthBtnText: {
+        color: 'rgba(255,255,255,0.6)',
+        fontSize: 13,
+        fontFamily: 'Oswald-Bold',
+    },
+    lengthBtnTextActive: { color: '#fff' },
+    lengthBtnSub: {
+        color: 'rgba(255,255,255,0.4)',
+        fontSize: 10,
+        fontFamily: 'Oswald-Regular',
+        marginTop: 2,
+    },
+    lengthBtnSubActive: { color: 'rgba(255,255,255,0.85)' },
+
     // ── Cover tab ──────────────────────────────────────────────
     coverHeaderCard: {
         marginBottom: 14,

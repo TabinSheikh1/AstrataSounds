@@ -15,6 +15,7 @@ import {
     ActivityIndicator,
     Keyboard,
     TouchableWithoutFeedback,
+    Modal,
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import GradientBackground from './GradientBackground';
@@ -313,8 +314,16 @@ const SignUpScreen = ({ navigation }) => {
                 </TouchableWithoutFeedback>
             </KeyboardAvoidingView>
 
-            {/* Gender Picker Modal */}
-            {isGenderModalVisible && (
+            {/* Gender Picker Modal — a real native Modal (not a plain absolutely-positioned
+                View) so it renders in its own layer and reliably receives taps on physical
+                Android devices, where a bare View can lose the touch/elevation stacking
+                order to sibling components like KeyboardAvoidingView/ScrollView. */}
+            <Modal
+                visible={isGenderModalVisible}
+                transparent
+                animationType="slide"
+                onRequestClose={() => setGenderModal(false)}
+            >
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalSheet}>
                         <Text style={styles.modalTitle}>Select Gender</Text>
@@ -335,7 +344,7 @@ const SignUpScreen = ({ navigation }) => {
                         </TouchableOpacity>
                     </View>
                 </View>
-            )}
+            </Modal>
         </GradientBackground>
     );
 };

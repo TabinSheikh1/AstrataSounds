@@ -14,7 +14,7 @@ const FAQS = [
     items: [
       {
         q: 'How does AI song generation work?',
-        a: 'AstrataSound uses advanced AI models to compose original music based on your style prompt, selected genre, mood, and lyrics. The AI processes your inputs and generates a unique song — no two songs are the same.',
+        a: 'StrataSound Music uses advanced AI models to compose original music based on your style prompt, selected genre, mood, and lyrics. The AI processes your inputs and generates a unique song — no two songs are the same.',
       },
       {
         q: 'How long does generation take?',
@@ -56,7 +56,7 @@ const FAQS = [
       },
       {
         q: 'Do I own the songs I create?',
-        a: 'Yes. Songs you generate belong to you under the terms of your plan. AstrataSound retains no ownership over your creations.',
+        a: 'Yes. Songs you generate belong to you under the terms of your plan. StrataSound Music retains no ownership over your creations.',
       },
       {
         q: 'What genres and styles are supported?',
@@ -71,7 +71,7 @@ const FAQS = [
     items: [
       {
         q: 'What should I do if generation fails?',
-        a: 'Failed generations do not consume credits. Try again with a slightly different prompt. If the problem persists, contact us at support@astratasounds.com.',
+        a: 'Failed generations do not consume credits. Try again with a slightly different prompt. If the problem persists, contact us at support@stratasoundmusic.com.',
       },
       {
         q: 'Can I download my songs?',
@@ -112,7 +112,7 @@ const FAQsScreen = () => {
           </View>
           <View style={s.heroText}>
             <Text style={s.heroTitle}>Frequently Asked Questions</Text>
-            <Text style={s.heroSub}>Everything you need to know about AstrataSound</Text>
+            <Text style={s.heroSub}>Everything you need to know about StrataSound Music</Text>
           </View>
         </View>
 

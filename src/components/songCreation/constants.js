@@ -204,6 +204,17 @@ export const CATEGORIES = [
 
 export const TABS = ['Lyrics', 'Cover', 'Generate'];
 
+// Backend values match SongLength in generate-song.dto.ts (a separate concept from
+// SongDuration/token pricing — picking a shorter length here never changes price).
+// Picking a shorter length doesn't trim an already-generated full song afterward — the
+// AI writes a smaller, complete song from scratch (fewer verses, shorter structure) so
+// it sounds finished at that length instead of cut off.
+export const SONG_LENGTHS = [
+    { value: 'short', label: 'Short', sub: '~2 min' },
+    { value: 'normal', label: 'Normal', sub: '~3–3:30 min' },
+    { value: 'full', label: 'Full', sub: '4+ min' },
+];
+
 export const LANGUAGES = [
     { value: 'english', label: 'English', native: 'English', flag: '🇺🇸' },
     { value: 'spanish', label: 'Spanish', native: 'Español', flag: '🇪🇸' },

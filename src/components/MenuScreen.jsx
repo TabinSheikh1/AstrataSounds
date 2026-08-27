@@ -12,10 +12,12 @@ import {
     Animated,
     Easing,
     Dimensions,
+    Linking,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTabBarHeight } from '../navigation/tabBarStore';
 import {
     Share2, MessageSquare, Mail, HelpCircle,
@@ -28,6 +30,15 @@ import { logoutUser } from '../store/actions/authActions';
 import { SERVER_URL as BASE_URL } from '../config/api';
 const DRAWER_WIDTH = Dimensions.get('window').width * 0.85;
 const SCREEN_HEIGHT = Dimensions.get('window').height;
+
+const SOCIAL_LINKS = [
+    { key: 'facebook', C: Facebook, url: 'https://www.facebook.com/profile.php?id=61581659297971&sk=about' },
+    { key: 'instagram', C: Instagram, url: 'https://www.instagram.com/stratasoundmusic/' },
+    { key: 'twitter', C: Twitter, url: 'https://x.com/stratasoundllc' },
+    { key: 'youtube', C: Youtube, url: 'https://www.youtube.com/@StrataSoundMusic' },
+    { key: 'tiktok', emoji: '🎵', url: 'https://www.tiktok.com/@stratasoundmusic' },
+    { key: 'discord', icon: 'discord', url: 'https://discord.com/channels/1425954859626270730' },
+];
 
 const buildAvatarUri = (profilePicture) => {
     if (!profilePicture) return null;
@@ -271,19 +282,22 @@ const MenuScreen = ({ visible, onClose }) => {
                             <View style={styles.card}>
                                 <Text style={styles.sectionTitle}>Follow Us</Text>
                                 <View style={styles.socialRow}>
-                                    {[
-                                        { C: Facebook },
-                                        { C: Instagram },
-                                        { C: Twitter },
-                                        { C: Youtube },
-                                    ].map(({ C }, i) => (
-                                        <TouchableOpacity key={i} style={styles.socialCircle} activeOpacity={0.7}>
-                                            <C color="#fff" size={18} />
+                                    {SOCIAL_LINKS.map(({ key, C, icon, emoji, url }) => (
+                                        <TouchableOpacity
+                                            key={key}
+                                            style={styles.socialCircle}
+                                            activeOpacity={0.7}
+                                            onPress={() => Linking.openURL(url).catch(() => {})}
+                                        >
+                                            {C ? (
+                                                <C color="#fff" size={18} />
+                                            ) : icon ? (
+                                                <MaterialCommunityIcons name={icon} color="#fff" size={20} />
+                                            ) : (
+                                                <Text style={styles.discordEmoji}>{emoji}</Text>
+                                            )}
                                         </TouchableOpacity>
                                     ))}
-                                    <TouchableOpacity style={styles.socialCircle} activeOpacity={0.7}>
-                                        <Text style={styles.discordEmoji}>👾</Text>
-                                    </TouchableOpacity>
                                 </View>
                             </View>
 
@@ -292,7 +306,11 @@ const MenuScreen = ({ visible, onClose }) => {
                                 <Text style={styles.actionBtnText}>LOG OUT</Text>
                             </TouchableOpacity>
 
-                            <TouchableOpacity style={styles.deleteBtn} activeOpacity={0.85}>
+                            <TouchableOpacity
+                                style={styles.deleteBtn}
+                                activeOpacity={0.85}
+                                onPress={() => Linking.openURL('https://stratasoundmusic.com/delete-account').catch(() => {})}
+                            >
                                 <MaterialIcons name="delete-forever" size={18} color="#fff" style={{ marginRight: 8 }} />
                                 <Text style={styles.actionBtnText}>DELETE ACCOUNT</Text>
                             </TouchableOpacity>

@@ -12,12 +12,12 @@ const SECTIONS = [
   {
     icon: 'handshake',
     title: '1. Acceptance of Terms',
-    body: 'By accessing or using AstrataSound ("the App"), you agree to be bound by these Terms of Service. If you do not agree to these terms, please do not use the App. We reserve the right to update these terms at any time, and continued use constitutes acceptance of any changes.',
+    body: 'By accessing or using StrataSound Music ("the App"), you agree to be bound by these Terms of Service. If you do not agree to these terms, please do not use the App. We reserve the right to update these terms at any time, and continued use constitutes acceptance of any changes.',
   },
   {
     icon: 'music-note',
     title: '2. Use of the Service',
-    body: 'AstrataSound provides an AI-powered music generation platform. You may use the App for personal or commercial purposes subject to your subscription plan. You agree not to use the service for any unlawful purpose, to upload harmful content, or to attempt to reverse-engineer the AI models.',
+    body: 'StrataSound Music provides an AI-powered music generation platform. You may use the App for personal or commercial purposes subject to your subscription plan. You agree not to use the service for any unlawful purpose, to upload harmful content, or to attempt to reverse-engineer the AI models.',
   },
   {
     icon: 'auto-awesome',
@@ -27,7 +27,7 @@ const SECTIONS = [
   {
     icon: 'copyright',
     title: '4. Intellectual Property',
-    body: 'You retain ownership of songs you generate within your subscription. AstrataSound retains all rights to the platform, AI models, and underlying technology. Spark (free) and Basic plan users receive a personal-use license only. Creator and Commercial plan subscribers receive a full commercial-use license.',
+    body: 'You retain ownership of songs you generate within your subscription. StrataSound Music retains all rights to the platform, AI models, and underlying technology. Spark (free) and Basic plan users receive a personal-use license only. Creator and Commercial plan subscribers receive a full commercial-use license.',
   },
   {
     icon: 'credit-card',
@@ -47,12 +47,12 @@ const SECTIONS = [
   {
     icon: 'shield',
     title: '8. Disclaimer of Warranties',
-    body: 'AstrataSound is provided "as is" without warranties of any kind. We do not guarantee uninterrupted service, error-free operation, or that AI-generated content will meet your specific requirements. Use of the service is at your own risk.',
+    body: 'StrataSound Music is provided "as is" without warranties of any kind. We do not guarantee uninterrupted service, error-free operation, or that AI-generated content will meet your specific requirements. Use of the service is at your own risk.',
   },
   {
     icon: 'info',
     title: '9. Contact',
-    body: 'For any questions regarding these Terms of Service, please contact us at legal@astratasounds.com.',
+    body: 'For any questions regarding these Terms of Service, please contact us at legal@stratasoundmusic.com.',
   },
 ];
 
@@ -85,7 +85,7 @@ const TermsScreen = () => {
         </View>
 
         <Text style={s.intro}>
-          Please read these Terms of Service carefully before using AstrataSound. These terms govern your access to and use of our AI music creation platform.
+          Please read these Terms of Service carefully before using StrataSound Music. These terms govern your access to and use of our AI music creation platform.
         </Text>
 
         {SECTIONS.map((sec) => (
@@ -100,7 +100,7 @@ const TermsScreen = () => {
           </View>
         ))}
 
-        <Text style={s.footer}>© 2025 AstrataSound. All rights reserved.</Text>
+        <Text style={s.footer}>© 2025 StrataSound Music. All rights reserved.</Text>
 
       </ScrollView>
     </ImageBackground>

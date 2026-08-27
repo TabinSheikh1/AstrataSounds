@@ -6,8 +6,8 @@ import {
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation } from '@react-navigation/native';
 
-const APP_LINK = 'https://astratasounds.com/download';
-const APP_MESSAGE = '🎵 I\'m creating AI-generated music with AstrataSound! Compose unique songs in minutes. Try it free → ' + APP_LINK;
+const APP_LINK = 'https://stratasoundmusic.com/download';
+const APP_MESSAGE = '🎵 I\'m creating AI-generated music with StrataSound Music! Compose unique songs in minutes. Try it free → ' + APP_LINK;
 
 const SHARE_OPTIONS = [
   { icon: 'share',         label: 'Share via...',     onPress: null, primary: true },
@@ -20,7 +20,7 @@ const ShareScreen = () => {
 
   const handleNativeShare = async () => {
     try {
-      await Share.share({ message: APP_MESSAGE, url: APP_LINK, title: 'AstrataSound — AI Music Creation' });
+      await Share.share({ message: APP_MESSAGE, url: APP_LINK, title: 'StrataSound Music — AI Music Creation' });
     } catch { /* cancelled */ }
   };
 
@@ -29,7 +29,7 @@ const ShareScreen = () => {
   };
 
   const handleEmail = () => {
-    Linking.openURL(`mailto:?subject=Check out AstrataSound&body=${encodeURIComponent(APP_MESSAGE)}`).catch(() => {});
+    Linking.openURL(`mailto:?subject=Check out StrataSound Music&body=${encodeURIComponent(APP_MESSAGE)}`).catch(() => {});
   };
 
   const handlers = { native: handleNativeShare, copy: handleCopy, email: handleEmail };
@@ -50,7 +50,7 @@ const ShareScreen = () => {
         {/* App logo card */}
         <View style={s.logoCard}>
           <Image source={require('../assets/images/logo.jpg')} style={s.logo} resizeMode="contain" />
-          <Text style={s.appName}>AstrataSound</Text>
+          <Text style={s.appName}>StrataSound Music</Text>
           <Text style={s.tagline}>AI-Powered Music Creation</Text>
 
           {/* Feature pills */}

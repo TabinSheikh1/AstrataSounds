@@ -48,7 +48,7 @@ const SECTIONS = [
     icon: 'security',
     title: '4. Data Security',
     color: '#9c27b0',
-    body: 'We implement industry-standard security measures including TLS encryption in transit, AES-256 encryption at rest, and regular security audits. While we take every precaution, no system is 100% secure. Report security concerns to security@astratasounds.com.',
+    body: 'We implement industry-standard security measures including TLS encryption in transit, AES-256 encryption at rest, and regular security audits. While we take every precaution, no system is 100% secure. Report security concerns to security@stratasoundmusic.com.',
   },
   {
     icon: 'person',
@@ -66,7 +66,7 @@ const SECTIONS = [
     icon: 'child-care',
     title: '6. Children\'s Privacy',
     color: '#ff9800',
-    body: 'AstrataSound is not intended for users under 13 years of age. We do not knowingly collect personal data from children. If you believe a child has provided us with personal information, please contact us immediately.',
+    body: 'StrataSound Music is not intended for users under 13 years of age. We do not knowingly collect personal data from children. If you believe a child has provided us with personal information, please contact us immediately.',
   },
   {
     icon: 'update',
@@ -137,18 +137,18 @@ const PrivacyScreen = () => {
         {/* Contact row */}
         <TouchableOpacity
           style={s.contactCard}
-          onPress={() => Linking.openURL('mailto:privacy@astratasounds.com').catch(() => {})}
+          onPress={() => Linking.openURL('mailto:privacy@stratasoundmusic.com').catch(() => {})}
           activeOpacity={0.8}
         >
           <MaterialIcons name="email" size={20} color="#66cc33" />
           <View style={{ flex: 1 }}>
             <Text style={s.contactTitle}>Privacy Questions?</Text>
-            <Text style={s.contactEmail}>privacy@astratasounds.com</Text>
+            <Text style={s.contactEmail}>privacy@stratasoundmusic.com</Text>
           </View>
           <MaterialIcons name="chevron-right" size={20} color="rgba(255,255,255,0.35)" />
         </TouchableOpacity>
 
-        <Text style={s.footer}>© 2025 AstrataSound. All rights reserved.</Text>
+        <Text style={s.footer}>© 2025 StrataSound Music. All rights reserved.</Text>
 
       </ScrollView>
     </ImageBackground>

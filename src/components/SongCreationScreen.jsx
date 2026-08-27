@@ -99,11 +99,13 @@ const SongCreationScreen = () => {
     const [lyricsText, setLyricsText]           = useState('');
     const [lyricsMode, setLyricsMode]           = useState('manual');
     const [selectedMood, setSelectedMood]       = useState(null);
+    const [lyricsPrompt, setLyricsPrompt]       = useState('');
     const [showMoodPicker, setShowMoodPicker]   = useState(false);
     const [showGenrePicker, setShowGenrePicker] = useState(false);
     const [vibes, setVibes]                     = useState([]);
     const [selectedVibeId, setSelectedVibeId]   = useState(null);
     const [vibesLoading, setVibesLoading]       = useState(false);
+    const [selectedSongLength, setSelectedSongLength] = useState('full');
 
     // Cover tab state
     const [coverMode, setCoverMode]       = useState('ai');
@@ -178,6 +180,8 @@ const SongCreationScreen = () => {
         setLyricsText('');
         setLyricsMode('manual');
         setSelectedMood(null);
+        setLyricsPrompt('');
+        setSelectedSongLength('full');
         setSelectedVibeId(null);
         setCoverMode('ai');
         setImagePrompt('');
@@ -240,8 +244,10 @@ const SongCreationScreen = () => {
                 category: selectedCategory,
                 lyricsMode: isManualLyrics ? 'manual' : 'ai',
                 language: selectedLanguage,
+                songLength: selectedSongLength,
                 ...(isManualLyrics ? { lyrics: lyricsText.trim() } : {}),
                 ...(!isManualLyrics && selectedMood && !selectedVibeId ? { mood: selectedMood } : {}),
+                ...(!isManualLyrics && lyricsPrompt.trim() ? { lyricsPrompt: lyricsPrompt.trim() } : {}),
                 ...(selectedVibeId ? { vibeId: selectedVibeId } : { prompt: promptValue || 'A beautiful well-crafted song' }),
             };
 
@@ -272,7 +278,9 @@ const SongCreationScreen = () => {
                     selectedCategory={selectedCategory} setShowGenrePicker={setShowGenrePicker}
                     lyricsText={lyricsText} setLyricsText={setLyricsText}
                     lyricsMode={lyricsMode} setLyricsMode={setLyricsMode}
-                    selectedMood={selectedMood}
+                    selectedMood={selectedMood} setSelectedMood={setSelectedMood}
+                    lyricsPrompt={lyricsPrompt} setLyricsPrompt={setLyricsPrompt}
+                    selectedSongLength={selectedSongLength} setSelectedSongLength={setSelectedSongLength}
                     setShowMoodPicker={setShowMoodPicker}
                     selectedLanguage={selectedLanguage} setSelectedLanguage={setSelectedLanguage}
                     vibes={vibes} selectedVibeId={selectedVibeId} setSelectedVibeId={setSelectedVibeId}

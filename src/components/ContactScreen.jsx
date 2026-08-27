@@ -7,9 +7,8 @@ import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation } from '@react-navigation/native';
 
 const CONTACTS = [
-  { icon: 'email',    label: 'Email Us',       value: 'support@astratasounds.com', action: 'mailto:support@astratasounds.com', color: '#66cc33' },
-  { icon: 'discord',  label: 'Join Discord',    value: 'discord.gg/astratasounds',   action: 'https://discord.gg/astratasounds',  color: '#5865F2' },
-  { icon: 'language', label: 'Visit Website',   value: 'www.astratasounds.com',      action: 'https://www.astratasounds.com',     color: '#047ec9' },
+  { icon: 'email',    label: 'Email Us',       value: 'support@stratasoundmusic.com', action: 'mailto:support@stratasoundmusic.com', color: '#66cc33' },
+  { icon: 'language', label: 'Visit Website',   value: 'stratasoundmusic.com',         action: 'https://stratasoundmusic.com/',       color: '#047ec9' },
 ];
 
 const ContactScreen = () => {
@@ -27,12 +26,12 @@ const ContactScreen = () => {
     const body    = encodeURIComponent(
       `Name: ${name.trim()}\nEmail: ${email.trim()}\n\n${message.trim()}`
     );
-    Linking.openURL(`mailto:support@astratasounds.com?subject=${subject}&body=${body}`)
+    Linking.openURL(`mailto:support@stratasoundmusic.com?subject=${subject}&body=${body}`)
       .then(() => {
         setName(''); setEmail(''); setMessage('');
       })
       .catch(() =>
-        Alert.alert('Could not open email app', 'Please email us directly at support@astratasounds.com')
+        Alert.alert('Could not open email app', 'Please email us directly at support@stratasoundmusic.com')
       );
   };
 

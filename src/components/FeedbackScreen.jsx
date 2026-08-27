@@ -43,7 +43,7 @@ const FeedbackScreen = () => {
             <MaterialIcons name="check-circle" size={52} color="#66cc33" />
           </View>
           <Text style={s.thankTitle}>Thank You! 🎉</Text>
-          <Text style={s.thankSub}>Your feedback helps us make AstrataSound better for everyone. We really appreciate it.</Text>
+          <Text style={s.thankSub}>Your feedback helps us make StrataSound Music better for everyone. We really appreciate it.</Text>
           <TouchableOpacity style={s.doneBtn} onPress={() => navigation.goBack()} activeOpacity={0.85}>
             <Text style={s.doneBtnText}>Back to Menu</Text>
           </TouchableOpacity>
@@ -73,7 +73,7 @@ const FeedbackScreen = () => {
           </View>
           <View style={s.heroText}>
             <Text style={s.heroTitle}>Help Us Improve</Text>
-            <Text style={s.heroSub}>Your opinion shapes the future of AstrataSound</Text>
+            <Text style={s.heroSub}>Your opinion shapes the future of StrataSound Music</Text>
           </View>
         </View>
 

@@ -4,7 +4,7 @@ import {
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import { LANGUAGES } from './constants';
+import { LANGUAGES, SONG_LENGTHS } from './constants';
 import { styles } from './songCreationStyles';
 import SectionLabel from './SectionLabel';
 import GlassBox from './GlassBox';
@@ -17,6 +17,8 @@ const LyricsTab = ({
     lyricsText, setLyricsText,
     lyricsMode, setLyricsMode,
     selectedMood, setSelectedMood,
+    lyricsPrompt, setLyricsPrompt,
+    selectedSongLength, setSelectedSongLength,
     setShowMoodPicker,
     selectedLanguage, setSelectedLanguage,
     vibes, selectedVibeId, setSelectedVibeId, vibesLoading,
@@ -71,6 +73,25 @@ const LyricsTab = ({
             </View>
             <MaterialIcons name="keyboard-arrow-down" size={20} color="rgba(255,255,255,0.5)" />
         </TouchableOpacity>
+
+        {/* Song Length — shapes how much the AI writes, not a trim applied afterward */}
+        <SectionLabel icon="straighten" title="Song Length" />
+        <View style={styles.lengthRow}>
+            {SONG_LENGTHS.map((len) => {
+                const isSelected = selectedSongLength === len.value;
+                return (
+                    <TouchableOpacity
+                        key={len.value}
+                        onPress={() => setSelectedSongLength(len.value)}
+                        style={[styles.lengthBtn, isSelected && styles.lengthBtnActive]}
+                        activeOpacity={0.8}
+                    >
+                        <Text style={[styles.lengthBtnText, isSelected && styles.lengthBtnTextActive]}>{len.label}</Text>
+                        <Text style={[styles.lengthBtnSub, isSelected && styles.lengthBtnSubActive]}>{len.sub}</Text>
+                    </TouchableOpacity>
+                );
+            })}
+        </View>
 
         {/* Prompt mode */}
         {styleMode === 'prompt' && (
@@ -130,15 +151,27 @@ const LyricsTab = ({
         <SectionLabel icon="lyrics" title="Lyrics" hint />
         <GlassBox>
             {lyricsMode === 'ai' && selectedMood ? (
-                <View style={styles.aiLyricsSelected}>
-                    <MaterialIcons name="auto-awesome" size={16} color="#66cc33" />
-                    <Text style={styles.aiLyricsSelectedText}>
-                        AI will write {selectedMood} lyrics for you
-                    </Text>
-                    <TouchableOpacity onPress={() => { setLyricsMode('manual'); setSelectedMood(null); }} style={styles.aiLyricsClear}>
-                        <MaterialIcons name="close" size={14} color="rgba(255,255,255,0.5)" />
-                    </TouchableOpacity>
-                </View>
+                <>
+                    <View style={styles.aiLyricsSelected}>
+                        <MaterialIcons name="auto-awesome" size={16} color="#66cc33" />
+                        <Text style={styles.aiLyricsSelectedText}>
+                            AI will write {selectedMood} lyrics for you
+                        </Text>
+                        <TouchableOpacity onPress={() => { setLyricsMode('manual'); setSelectedMood(null); setLyricsPrompt(''); }} style={styles.aiLyricsClear}>
+                            <MaterialIcons name="close" size={14} color="rgba(255,255,255,0.5)" />
+                        </TouchableOpacity>
+                    </View>
+                    <TextInput
+                        style={[styles.textArea, { minHeight: 70, marginTop: 10 }]}
+                        placeholder="Tell the AI what these lyrics should be about (optional) — a story, a person, a theme..."
+                        placeholderTextColor="rgba(255,255,255,0.4)"
+                        multiline
+                        maxLength={500}
+                        value={lyricsPrompt}
+                        onChangeText={setLyricsPrompt}
+                    />
+                    <Text style={styles.charCount}>{lyricsPrompt.length} / 500</Text>
+                </>
             ) : (
                 <>
                     <TextInput
