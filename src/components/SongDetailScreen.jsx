@@ -394,9 +394,7 @@ const SongDetailScreen = () => {
                         <Text style={styles.nowPlayingLabel}>NOW PLAYING</Text>
                         <Text style={styles.albumLabel} numberOfLines={1}>{song.title ?? 'Unknown'}</Text>
                     </View>
-                    <TouchableOpacity style={styles.topBtn}>
-                        <MaterialIcons name="more-vert" size={26} color="#fff" />
-                    </TouchableOpacity>
+                    <View style={styles.topBtn} />
                 </View>
 
                 {/* Album Art */}

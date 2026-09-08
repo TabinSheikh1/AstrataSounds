@@ -4,6 +4,7 @@ import { NavigationContainer, createNavigationContainerRef } from '@react-naviga
 import AppNavigator from './src/navigation/AppNavigator';
 import { tabBarStore } from './src/navigation/tabBarStore';
 import { setupPlayer } from './src/player/setupPlayer';
+import { initIAP, endIAP } from './src/iap/iapService';
 import { Provider } from 'react-redux';
 import { store, persistor } from './src/store/store';
 import { PersistGate } from 'redux-persist/integration/react';
@@ -43,6 +44,13 @@ const App = () => {
 
   useEffect(() => {
     setupPlayer();
+  }, []);
+
+  useEffect(() => {
+    initIAP();
+    return () => {
+      endIAP();
+    };
   }, []);
 
   useEffect(() => {

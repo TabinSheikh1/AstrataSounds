@@ -9,11 +9,15 @@ import {
   ActivityIndicator,
   Alert,
   Linking,
+  Platform,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import { useNavigation } from '@react-navigation/native';
 import { createCheckoutSession } from '../api/subscriptionsService';
 import { getErrorMessage } from '../utils/errorHandler';
+import { purchaseSubscription } from '../iap/iapService';
+import { getSubscriptionSku } from '../iap/products';
 
 const PLAN_PERKS = {
   Basic: [
@@ -54,6 +58,7 @@ const CheckoutConfirmModal = ({
   billingInterval,
 }) => {
   const [loading, setLoading] = useState(false);
+  const navigation = useNavigation();
 
   if (!plan) return null;
 
@@ -67,7 +72,30 @@ const CheckoutConfirmModal = ({
     : `$${plan.priceMonthly}/mo`;
   const perks = PLAN_PERKS[plan.name] ?? [];
 
-  const handleProceed = async () => {
+  const handleProceedIOS = async () => {
+    const sku = getSubscriptionSku(plan.name, billingInterval);
+    if (!sku) {
+      Alert.alert('Unavailable', 'This plan is not available for purchase yet.');
+      return;
+    }
+    setLoading(true);
+    try {
+      // Opens Apple's native purchase sheet. The actual result (success/failure)
+      // is NOT returned here — it arrives asynchronously via the purchaseUpdatedListener
+      // set up in src/iap/iapService.js, which verifies it with the backend and
+      // refreshes the subscription state once confirmed.
+      await purchaseSubscription(sku);
+      onClose();
+    } catch (e) {
+      if (e?.code !== 'E_USER_CANCELLED') {
+        Alert.alert('Purchase Failed', getErrorMessage(e, 'Something went wrong. Please try again.'));
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleProceedStripe = async () => {
     setLoading(true);
     try {
       const res = await createCheckoutSession({
@@ -77,7 +105,6 @@ const CheckoutConfirmModal = ({
         cancelUrl: 'strataSounds://subscription/cancel',
       });
       const checkoutUrl = res.data?.data?.url ?? res.data?.url;
-
 
       if (checkoutUrl) {
         onClose();
@@ -94,6 +121,10 @@ const CheckoutConfirmModal = ({
       setLoading(false);
     }
   };
+
+  // iOS must go through In-App Purchase (App Store policy) — Android stays on
+  // Stripe until Google Play Billing verification is wired up on the backend.
+  const handleProceed = Platform.OS === 'ios' ? handleProceedIOS : handleProceedStripe;
 
   return (
     <Modal
@@ -178,6 +209,19 @@ const CheckoutConfirmModal = ({
           <TouchableOpacity onPress={onClose} style={styles.cancelBtn}>
             <Text style={styles.cancelText}>Cancel</Text>
           </TouchableOpacity>
+
+          <View style={styles.legalRow}>
+            <Text style={styles.legalText}>By subscribing, you agree to our</Text>
+            <View style={styles.legalLinks}>
+              <TouchableOpacity onPress={() => { onClose(); navigation.navigate('TermsScreen'); }}>
+                <Text style={styles.legalLink}>Terms of Use</Text>
+              </TouchableOpacity>
+              <Text style={styles.legalText}> and </Text>
+              <TouchableOpacity onPress={() => { onClose(); navigation.navigate('PrivacyScreen'); }}>
+                <Text style={styles.legalLink}>Privacy Policy</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
       </View>
     </Modal>
@@ -311,5 +355,18 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.45)',
     fontSize: 14,
     fontFamily: 'Oswald-Regular',
+  },
+  legalRow: { alignItems: 'center', paddingBottom: 4 },
+  legalLinks: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center' },
+  legalText: {
+    color: 'rgba(255,255,255,0.35)',
+    fontSize: 11,
+    fontFamily: 'Oswald-Regular',
+  },
+  legalLink: {
+    color: 'rgba(255,255,255,0.55)',
+    fontSize: 11,
+    fontFamily: 'Oswald-Regular',
+    textDecorationLine: 'underline',
   },
 });

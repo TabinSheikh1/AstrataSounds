@@ -9,7 +9,6 @@ import {
   StatusBar,
   Platform,
   Alert,
-  Linking,
   ImageBackground,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
@@ -18,8 +17,6 @@ import { useNavigation } from '@react-navigation/native';
 import { useSelector } from 'react-redux';
 import { useSubscription } from '../hooks/useSubscription';
 import CheckoutConfirmModal from './CheckoutConfirmModal';
-import { creditPackCheckout } from '../api/subscriptionsService';
-import { getErrorMessage } from '../utils/errorHandler';
 
 // ─── Plan display metadata ────────────────────────────────────────────────────
 
@@ -60,35 +57,6 @@ const PLAN_META = {
     badgeLabel: null,
   },
 };
-
-// ─── Credit pack config ───────────────────────────────────────────────────────
-
-const CREDIT_PACKS = [
-  {
-    packSize: 5,
-    songs: 5,
-    price: '$7.99',
-    priceNote: '$1.60/song',
-    label: 'Starter Pack',
-    highlight: false,
-  },
-  {
-    packSize: 15,
-    songs: 15,
-    price: '$19.99',
-    priceNote: '$1.33/song',
-    label: 'Value Pack',
-    highlight: true,
-  },
-  {
-    packSize: 50,
-    songs: 50,
-    price: '$59.99',
-    priceNote: '$1.20/song',
-    label: 'Creator Pack',
-    highlight: false,
-  },
-];
 
 // ─── Plan Card ────────────────────────────────────────────────────────────────
 
@@ -204,34 +172,6 @@ const PlanCard = ({ plan, isYearly, currentPlanId, isAuthenticated, onUpgrade })
   );
 };
 
-// ─── Credit Pack Card ─────────────────────────────────────────────────────────
-
-const CreditPackCard = ({ pack, onBuy, loading }) => (
-  <View style={[styles.packCard, pack.highlight && styles.packCardHighlight]}>
-    {pack.highlight && (
-      <View style={styles.packBestValue}>
-        <Text style={styles.packBestValueText}>BEST VALUE</Text>
-      </View>
-    )}
-    <Text style={styles.packSongs}>{pack.songs} Songs</Text>
-    <Text style={styles.packLabel}>{pack.label}</Text>
-    <Text style={styles.packPrice}>{pack.price}</Text>
-    <Text style={styles.packPriceNote}>{pack.priceNote}</Text>
-    <TouchableOpacity
-      onPress={() => onBuy(pack)}
-      activeOpacity={0.85}
-      disabled={loading}
-      style={[styles.packBtn, pack.highlight && styles.packBtnHighlight]}
-    >
-      {loading ? (
-        <ActivityIndicator color="#fff" size="small" />
-      ) : (
-        <Text style={styles.packBtnText}>Buy</Text>
-      )}
-    </TouchableOpacity>
-  </View>
-);
-
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
 const PricingScreen = () => {
@@ -242,7 +182,6 @@ const PricingScreen = () => {
   const [isYearly, setIsYearly] = useState(false);
   const [plansLoading, setPlansLoading] = useState(false);
   const [checkoutModal, setCheckoutModal] = useState({ visible: false, plan: null });
-  const [packLoadingId, setPackLoadingId] = useState(null);
 
   useEffect(() => {
     if (plans.length === 0) {
@@ -257,31 +196,6 @@ const PricingScreen = () => {
 
   const handleUpgrade = (plan) => {
     setCheckoutModal({ visible: true, plan });
-  };
-
-  const handleBuyPack = async (pack) => {
-    if (!isAuthenticated) {
-      Alert.alert('Sign in required', 'Please sign in to purchase a credit pack.');
-      return;
-    }
-    setPackLoadingId(pack.packSize);
-    try {
-      const res = await creditPackCheckout({
-        packSize: pack.packSize,
-        successUrl: 'strataSounds://subscription/success',
-        cancelUrl: 'strataSounds://subscription/cancel',
-      });
-      const url = res.data?.data?.url ?? res.data?.url;
-      if (url) {
-        await Linking.openURL(url);
-      } else {
-        Alert.alert('Error', 'Could not start checkout. Please try again.');
-      }
-    } catch (e) {
-      Alert.alert('Purchase Failed', getErrorMessage(e, 'Something went wrong.'));
-    } finally {
-      setPackLoadingId(null);
-    }
   };
 
   return (
@@ -344,50 +258,17 @@ const PricingScreen = () => {
           ))
         )}
 
-        {/* Credit packs divider */}
-        <View style={styles.sectionDivider}>
-          <View style={styles.dividerLine} />
-          <Text style={styles.sectionDividerText}>OR BUY A CREDIT PACK</Text>
-          <View style={styles.dividerLine} />
-        </View>
-
-        <Text style={styles.packSectionNote}>
-          One-time purchase. Credits never expire. Works on all plans including free.
-        </Text>
-
-        {/* Generation cost reference */}
-        <View style={styles.costReference}>
-          <View style={styles.costRow}>
-            <MaterialIcons name="music-note" size={14} color="rgba(255,255,255,0.6)" />
-            <Text style={styles.costText}>Full song — 1 credit</Text>
-          </View>
-          <View style={styles.costRow}>
-            <MaterialIcons name="timer" size={14} color="rgba(255,255,255,0.6)" />
-            <Text style={styles.costText}>Reel (15s or 30s) — 1 credit</Text>
-          </View>
-        </View>
-
-        {/* Credit pack cards */}
-        <View style={styles.packRow}>
-          {CREDIT_PACKS.map((pack) => (
-            <CreditPackCard
-              key={pack.packSize}
-              pack={pack}
-              loading={packLoadingId === pack.packSize}
-              onBuy={handleBuyPack}
-            />
-          ))}
-        </View>
-
-        {/* Cover art upsell note */}
-        <View style={styles.coverArtNote}>
-          <MaterialIcons name="image" size={16} color="rgba(255,255,255,0.5)" />
-          <Text style={styles.coverArtNoteText}>
-            AI cover art available as an optional add-on after song creation ($0.99 standard · $1.99 premium)
-          </Text>
-        </View>
-
         <Text style={styles.footer}>Cancel anytime. No hidden fees. Monthly credits reset each billing period.</Text>
+
+        <View style={styles.legalRow}>
+          <TouchableOpacity onPress={() => navigation.navigate('TermsScreen')}>
+            <Text style={styles.legalLink}>Terms of Use</Text>
+          </TouchableOpacity>
+          <Text style={styles.legalDivider}>·</Text>
+          <TouchableOpacity onPress={() => navigation.navigate('PrivacyScreen')}>
+            <Text style={styles.legalLink}>Privacy Policy</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
 
       <CheckoutConfirmModal
@@ -523,55 +404,17 @@ const styles = StyleSheet.create({
   },
   currentBtnText: { color: '#66cc33', fontSize: 15, fontFamily: 'Oswald-Bold', letterSpacing: 0.3 },
 
-  // Section divider
-  sectionDivider: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 8, marginBottom: 12 },
-  dividerLine: { flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.15)' },
-  sectionDividerText: { color: 'rgba(255,255,255,0.4)', fontSize: 11, fontFamily: 'Oswald-Bold', letterSpacing: 1.5 },
-  packSectionNote: {
-    color: 'rgba(255,255,255,0.5)', fontSize: 12, fontFamily: 'Oswald-Regular',
-    textAlign: 'center', marginBottom: 12, lineHeight: 18,
-  },
-
-  // Cost reference
-  costReference: {
-    flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 16,
-  },
-  costRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  costText: { color: 'rgba(255,255,255,0.55)', fontSize: 12, fontFamily: 'Oswald-Regular' },
-
-  // Credit packs
-  packRow: { flexDirection: 'row', gap: 10, marginBottom: 16 },
-  packCard: {
-    flex: 1, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 16,
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', padding: 14, alignItems: 'center',
-  },
-  packCardHighlight: { borderColor: 'rgba(102,204,51,0.45)', backgroundColor: 'rgba(102,204,51,0.07)' },
-  packBestValue: {
-    backgroundColor: '#66cc33', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, marginBottom: 8,
-  },
-  packBestValueText: { color: '#fff', fontSize: 8, fontFamily: 'Oswald-Bold', letterSpacing: 1 },
-  packSongs: { color: '#fff', fontSize: 20, fontFamily: 'Oswald-Bold', letterSpacing: 0.3 },
-  packLabel: { color: 'rgba(255,255,255,0.45)', fontSize: 11, fontFamily: 'Oswald-Regular', marginBottom: 8 },
-  packPrice: { color: '#fff', fontSize: 18, fontFamily: 'Oswald-Bold', marginBottom: 2 },
-  packPriceNote: { color: 'rgba(255,255,255,0.4)', fontSize: 10, fontFamily: 'Oswald-Regular', marginBottom: 12 },
-  packBtn: {
-    width: '100%', alignItems: 'center', padding: 10, borderRadius: 10,
-    backgroundColor: 'rgba(4,126,201,0.5)', borderWidth: 1, borderColor: 'rgba(4,126,201,0.6)',
-    minHeight: 38, justifyContent: 'center',
-  },
-  packBtnHighlight: { backgroundColor: 'rgba(102,204,51,0.4)', borderColor: 'rgba(102,204,51,0.6)' },
-  packBtnText: { color: '#fff', fontSize: 13, fontFamily: 'Oswald-Bold', letterSpacing: 0.5 },
-
-  // Cover art note
-  coverArtNote: {
-    flexDirection: 'row', alignItems: 'flex-start', gap: 8,
-    backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 12,
-    padding: 12, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
-  },
-  coverArtNoteText: { color: 'rgba(255,255,255,0.45)', fontSize: 12, fontFamily: 'Oswald-Regular', flex: 1, lineHeight: 18 },
-
   footer: {
     color: 'rgba(255,255,255,0.3)', fontSize: 12, fontFamily: 'Oswald-Regular',
     textAlign: 'center', marginTop: 8, lineHeight: 18,
   },
+  legalRow: {
+    flexDirection: 'row', justifyContent: 'center', alignItems: 'center',
+    gap: 8, marginTop: 14, marginBottom: 4,
+  },
+  legalLink: {
+    color: 'rgba(255,255,255,0.55)', fontSize: 12, fontFamily: 'Oswald-Regular',
+    textDecorationLine: 'underline',
+  },
+  legalDivider: { color: 'rgba(255,255,255,0.3)', fontSize: 12 },
 });

@@ -6,7 +6,7 @@ import {
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation } from '@react-navigation/native';
 
-const LAST_UPDATED = 'May 1, 2025';
+const LAST_UPDATED = 'September 8, 2026';
 
 const SECTIONS = [
   {
@@ -32,7 +32,7 @@ const SECTIONS = [
   {
     icon: 'credit-card',
     title: '5. Payments & Subscriptions',
-    body: 'Subscription fees are billed in advance on a monthly or annual basis. All payments are non-refundable unless required by law. Token allocations reset at the start of each billing cycle and do not carry over. You may cancel your subscription at any time; access continues until the period ends.',
+    body: 'Subscription plans (Basic, Pro, Creator, and Commercial) are billed in advance on a monthly or annual basis, as selected at purchase. On iOS, subscriptions are purchased through Apple\'s In-App Purchase system and payment is charged to your Apple ID account at confirmation of purchase. Subscriptions automatically renew for the same duration and price unless auto-renew is turned off at least 24 hours before the end of the current period, and your account will be charged for renewal within 24 hours prior to the end of the current period. You can manage or cancel your subscription at any time from your Apple ID Account Settings (iOS) or Google Play subscription settings (Android). Subscriptions cannot be cancelled directly through the App or by contacting support. Any unused portion of a free trial period, where offered, is forfeited when you purchase a subscription. Refunds for purchases made through the App Store or Google Play are governed by Apple\'s and Google\'s respective refund policies, not by StrataSound Music directly. Token allocations reset at the start of each billing cycle and do not carry over. One-time purchases (such as credit packs and AI cover art add-ons) are non-refundable except as required by law.',
   },
   {
     icon: 'block',

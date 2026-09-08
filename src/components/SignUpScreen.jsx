@@ -265,38 +265,6 @@ const SignUpScreen = ({ navigation }) => {
 
                     {/* Footer */}
                     <Animated.View style={[styles.footerSection, { opacity: footerOpacity }]}>
-                        <View style={styles.socialContainer}>
-                            <View style={styles.dividerRow}>
-                                <View style={styles.line} />
-                                <Text style={styles.socialText}>Or Sign Up With</Text>
-                                <View style={styles.line} />
-                            </View>
-
-                            <View style={styles.socialButtons}>
-                                <TouchableOpacity style={styles.socialButton}>
-                                    <Image
-                                        source={require('../assets/images/Google-Icon.png')}
-                                        style={styles.socialIcon}
-                                        resizeMode="contain"
-                                    />
-                                </TouchableOpacity>
-                                <TouchableOpacity style={styles.socialButton}>
-                                    <Image
-                                        source={require('../assets/images/Facebook-Icon.png')}
-                                        style={styles.socialIcon}
-                                        resizeMode="contain"
-                                    />
-                                </TouchableOpacity>
-                                <TouchableOpacity style={styles.socialButton}>
-                                    <Image
-                                        source={require('../assets/images/Apple-Icon.png')}
-                                        style={styles.socialIcon}
-                                        resizeMode="contain"
-                                    />
-                                </TouchableOpacity>
-                            </View>
-                        </View>
-
                         <View style={styles.loginRow}>
                             <Text style={styles.loginPrompt}>Already have an account?</Text>
                             <TouchableOpacity onPress={() => navigation.navigate('LoginScreen')}>
@@ -419,51 +387,6 @@ const styles = StyleSheet.create({
     footerSection: {
         width: '100%',
         alignItems: 'center',
-    },
-    socialContainer: {
-        marginTop: 24,
-        width: '100%',
-        alignItems: 'center',
-    },
-    dividerRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        width: '100%',
-    },
-    line: {
-        flex: 1,
-        height: 1,
-        backgroundColor: 'rgba(255,255,255,0.35)',
-        marginHorizontal: 8,
-    },
-    socialText: {
-        color: '#fff',
-        fontSize: 13,
-        fontFamily: 'Oswald-Regular',
-        letterSpacing: 0.5,
-    },
-    socialButtons: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        width: '80%',
-        marginTop: 16,
-    },
-    socialButton: {
-        width: 80,
-        height: 50,
-        borderRadius: 12,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: '#ffffff',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 3 },
-        shadowOpacity: 0.15,
-        shadowRadius: 6,
-        elevation: 4,
-    },
-    socialIcon: {
-        width: 30,
-        height: 30,
     },
     loginRow: {
         flexDirection: 'row',
