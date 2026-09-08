@@ -284,7 +284,7 @@ const PricingScreen = () => {
 export default PricingScreen;
 
 const styles = StyleSheet.create({
-  root: { flex: 1 },
+  root: { flex: 1, backgroundColor: '#0d1117' },
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
