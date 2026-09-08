@@ -114,6 +114,7 @@ export default SingersScreen;
 const styles = StyleSheet.create({
     background: {
         flex: 1,
+        backgroundColor: '#0d1117',
     },
 
     // Title row

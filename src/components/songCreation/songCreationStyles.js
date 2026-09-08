@@ -3,7 +3,7 @@ import { StyleSheet, Dimensions } from 'react-native';
 const { width } = Dimensions.get('window');
 
 export const styles = StyleSheet.create({
-    background: { flex: 1 },
+    background: { flex: 1, backgroundColor: '#0d1117' },
     container: { flex: 1 },
 
     // ── Step indicator ─────────────────────────────────────────

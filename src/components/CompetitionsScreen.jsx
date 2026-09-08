@@ -386,7 +386,7 @@ const CompetitionsScreen = () => {
 export default CompetitionsScreen;
 
 const s = StyleSheet.create({
-  background: { flex: 1, width: '100%', height: '100%' },
+  background: { flex: 1, width: '100%', height: '100%', backgroundColor: '#0d1117' },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 10, paddingVertical: 60 },
   loadingText: { color: 'rgba(255,255,255,0.5)', fontFamily: 'Oswald-Regular', fontSize: 14 },
   emptyTitle: { color: 'rgba(255,255,255,0.7)', fontFamily: 'Oswald-Bold', fontSize: 16, marginTop: 8 },

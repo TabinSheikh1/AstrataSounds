@@ -509,7 +509,7 @@ const BillingScreen = () => {
 export default BillingScreen;
 
 const styles = StyleSheet.create({
-  root: { flex: 1 },
+  root: { flex: 1, backgroundColor: '#0d1117' },
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -274,7 +274,7 @@ const SubscriptionSuccessScreen = () => {
 export default SubscriptionSuccessScreen;
 
 const styles = StyleSheet.create({
-  root: { flex: 1 },
+  root: { flex: 1, backgroundColor: '#0d1117' },
   center: {
     flex: 1,
     alignItems: 'center',
