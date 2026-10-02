@@ -1,0 +1,8 @@
+{
+  "extends": "@react-native/typescript-config",
+  "compilerOptions": {
+    "types": ["jest"],
+  },
+  "include": ["**/*.ts", "**/*.tsx", "src/navigation/AppNavigator.jsx", "src/components/SplashScreen.jsx", "src/components/HomeScreen.jsx", "src/components/GradientBackground.jsx", "src/components/LoginScreen.jsx"],
+  "exclude": ["**/node_modules", "**/Pods"]
+}
