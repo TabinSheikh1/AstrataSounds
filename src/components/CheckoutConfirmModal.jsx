@@ -8,13 +8,10 @@ import {
   TouchableWithoutFeedback,
   ActivityIndicator,
   Alert,
-  Linking,
-  Platform,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation } from '@react-navigation/native';
-import { createCheckoutSession } from '../api/subscriptionsService';
 import { getErrorMessage } from '../utils/errorHandler';
 import { purchaseSubscription } from '../iap/iapService';
 import { getSubscriptionSku } from '../iap/products';
@@ -72,7 +69,9 @@ const CheckoutConfirmModal = ({
     : `$${plan.priceMonthly}/mo`;
   const perks = PLAN_PERKS[plan.name] ?? [];
 
-  const handleProceedIOS = async () => {
+  // Both stores require native in-app purchase for subscriptions (App Store / Google Play
+  // policy), so there is no web-checkout path here any more.
+  const handleProceed = async () => {
     const sku = getSubscriptionSku(plan.name, billingInterval);
     if (!sku) {
       Alert.alert('Unavailable', 'This plan is not available for purchase yet.');
@@ -80,7 +79,7 @@ const CheckoutConfirmModal = ({
     }
     setLoading(true);
     try {
-      // Opens Apple's native purchase sheet. The actual result (success/failure)
+      // Opens the store's native purchase sheet. The actual result (success/failure)
       // is NOT returned here — it arrives asynchronously via the purchaseUpdatedListener
       // set up in src/iap/iapService.js, which verifies it with the backend and
       // refreshes the subscription state once confirmed.
@@ -94,37 +93,6 @@ const CheckoutConfirmModal = ({
       setLoading(false);
     }
   };
-
-  const handleProceedStripe = async () => {
-    setLoading(true);
-    try {
-      const res = await createCheckoutSession({
-        planId: plan.id,
-        billingInterval,
-        successUrl: 'strataSounds://subscription/success',
-        cancelUrl: 'strataSounds://subscription/cancel',
-      });
-      const checkoutUrl = res.data?.data?.url ?? res.data?.url;
-
-      if (checkoutUrl) {
-        onClose();
-        await Linking.openURL(checkoutUrl);
-      } else {
-        Alert.alert('Error', 'Could not get checkout URL. Please try again.');
-      }
-    } catch (e) {
-      Alert.alert(
-        'Checkout Failed',
-        getErrorMessage(e, 'Something went wrong. Please try again.'),
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // iOS must go through In-App Purchase (App Store policy) — Android stays on
-  // Stripe until Google Play Billing verification is wired up on the backend.
-  const handleProceed = Platform.OS === 'ios' ? handleProceedIOS : handleProceedStripe;
 
   return (
     <Modal

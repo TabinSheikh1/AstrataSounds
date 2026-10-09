@@ -18,4 +18,13 @@ buildscript {
     }
 }
 
+// AsyncStorage v3 ships its native storage dependency in a local Maven folder inside the package
+allprojects {
+    repositories {
+        maven {
+            url = uri("${rootDir}/../node_modules/@react-native-async-storage/async-storage/android/local_repo")
+        }
+    }
+}
+
 apply plugin: "com.facebook.react.rootproject"

@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   TouchableWithoutFeedback,
   ScrollView,
+  Platform,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
@@ -58,7 +59,10 @@ const UpgradePromptModal = ({
 }) => {
   const navigation = useNavigation();
 
-  const planOrder = ['Spark', 'Basic', 'Pro', 'Creator', 'Commercial'];
+  // Commercial isn't sold on Google Play, so don't suggest it on Android.
+  const planOrder = Platform.OS === 'android'
+    ? ['Spark', 'Basic', 'Pro', 'Creator']
+    : ['Spark', 'Basic', 'Pro', 'Creator', 'Commercial'];
   const currentIdx = planOrder.indexOf(currentPlanName);
   const defaultNext = planOrder[Math.min(currentIdx + 1, planOrder.length - 1)];
   const suggestedPlan = nextPlan?.name ?? defaultNext;

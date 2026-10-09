@@ -72,10 +72,13 @@ def enableProguardInReleaseBuilds = false
  */
 def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
 
-def keystorePropertiesFile = rootProject.file("key.properties")
+// Release signing: the upload key described in android/key.properties (kept out of version
+// control going forward). Release builds REFUSE to run without it rather than quietly signing
+// with the debug key, which Google Play rejects.
 def keystoreProperties = new Properties()
+def keystorePropertiesFile = rootProject.file('key.properties')
 if (keystorePropertiesFile.exists()) {
-    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+    keystorePropertiesFile.withInputStream { keystoreProperties.load(it) }
 }
 
 android {
@@ -88,8 +91,10 @@ android {
         applicationId "com.stratasounds"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        // versionCode must be higher than every build ever uploaded to Play. Format YYMMDDNN
+        // (year, month, day, build of the day) so it only ever goes up.
+        versionCode 26100904
+        versionName "1.1.0"
     }
     signingConfigs {
         debug {
@@ -112,7 +117,7 @@ android {
             signingConfig signingConfigs.debug
         }
         release {
-            signingConfig keystorePropertiesFile.exists() ? signingConfigs.release : signingConfigs.debug
+            signingConfig signingConfigs.release
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }
@@ -130,4 +135,12 @@ dependencies {
     }
     
 apply from: file("../../node_modules/react-native-vector-icons/fonts.gradle")
+}
+
+// Fail fast if someone builds a release without the upload key configured
+gradle.taskGraph.whenReady { graph ->
+    def wantsRelease = graph.allTasks.any { it.path.startsWith(':app:') && it.name.toLowerCase().contains('release') && (it.name.startsWith('bundle') || it.name.startsWith('assemble') || it.name.startsWith('package')) }
+    if (wantsRelease && !keystorePropertiesFile.exists()) {
+        throw new GradleException("android/key.properties is missing: a release build must be signed with the Play upload key, not the debug key.")
+    }
 }

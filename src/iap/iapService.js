@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import {
   initConnection,
   endConnection,
@@ -51,7 +52,14 @@ export async function initIAP() {
       const isConsumable = ALL_CONSUMABLE_SKUS.includes(
         purchase.productId ?? purchase.id,
       );
-      await finishTransaction({ purchase, isConsumable });
+      // The backend already granted the purchase at this point, so a failure while
+      // finishing it (e.g. Android's acknowledge, which the backend also does) must not
+      // stop the subscription state from refreshing.
+      try {
+        await finishTransaction({ purchase, isConsumable });
+      } catch (finishErr) {
+        console.warn('[IAP] finishTransaction failed after a verified purchase', finishErr);
+      }
 
       if (!isConsumable) {
         await refreshSubscriptionState();
@@ -89,6 +97,21 @@ export async function getConsumableProducts() {
 // Result arrives via the purchaseUpdatedListener set up in initIAP(), not this
 // call's return value.
 export async function purchaseSubscription(sku) {
+  if (Platform.OS === 'android') {
+    // Play Billing needs the base plan's offer token to start a subscription purchase,
+    // and it only comes from the product details — so fetch it right before buying.
+    const products = await fetchProducts({ skus: [sku], type: 'subs' });
+    const product = products?.find((p) => p.id === sku);
+    const offerToken = product?.subscriptionOffers?.find((o) => o.offerTokenAndroid)?.offerTokenAndroid;
+    if (!offerToken) {
+      throw new Error('This plan is not available for purchase yet.');
+    }
+    return requestPurchase({
+      request: { google: { skus: [sku], subscriptionOffers: [{ sku, offerToken }] } },
+      type: 'subs',
+    });
+  }
+
   return requestPurchase({
     request: { apple: { sku }, google: { skus: [sku] } },
     type: 'subs',

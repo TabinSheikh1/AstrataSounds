@@ -192,7 +192,13 @@ const PricingScreen = () => {
 
   const currentPlanId = subscription?.plan?.id ?? null;
   const isOnPaidPlan = subscription && subscription.status !== 'free';
-  const visiblePlans = plans.filter((p) => !(p.name === 'Spark' && isOnPaidPlan));
+  // Commercial isn't sold on Google Play, so it's hidden on Android (a user who already
+  // holds it via another platform still sees their plan on the Billing screen).
+  const visiblePlans = plans.filter(
+    (p) =>
+      !(p.name === 'Spark' && isOnPaidPlan) &&
+      !(p.name === 'Commercial' && Platform.OS === 'android'),
+  );
 
   const handleUpgrade = (plan) => {
     setCheckoutModal({ visible: true, plan });
