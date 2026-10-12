@@ -93,8 +93,8 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
         // versionCode must be higher than every build ever uploaded to Play. Format YYMMDDNN
         // (year, month, day, build of the day) so it only ever goes up.
-        versionCode 26100904
-        versionName "1.1.0"
+        versionCode 26101001
+        versionName "1.1.1"
     }
     signingConfigs {
         debug {
