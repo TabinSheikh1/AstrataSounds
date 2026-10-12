@@ -9,6 +9,7 @@ import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import Header from './Header';
 import { useNavigation } from '@react-navigation/native';
 import { launchImageLibrary } from 'react-native-image-picker';
+import { waitForSongGeneration } from '../utils/waitForSongGeneration';
 import { createSong, generateSongAudio, generateSongImage, uploadSongImage } from '../api/songsService';
 import { getMyVibes } from '../api/vibesService';
 import { getErrorMessage } from '../utils/errorHandler';
@@ -267,8 +268,10 @@ const SongCreationScreen = () => {
             };
 
             setGenStep('Generating song with AI (this may take a few minutes)...');
-            const updatedRaw = await generateSongAudio(song.id, generatePayload);
-            const updatedSong = updatedRaw?.data ?? updatedRaw ?? song;
+            // Returns as soon as the server accepts the job; the song keeps generating on the
+            // server even if the phone locks, so we just watch its status until it settles.
+            await generateSongAudio(song.id, generatePayload);
+            const updatedSong = await waitForSongGeneration(song.id);
 
             setGenerating(false);
             resetForm();

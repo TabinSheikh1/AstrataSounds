@@ -51,3 +51,13 @@ export const downloadSongToDevice = async (songId, kind = 'audio', onProgress) =
 
   return res.path();
 };
+
+// A tweak or undo replaces the song's audio, so any offline copy is now the wrong version
+// (and sharing reuses it). Removes the downloaded audio and reel; missing files are fine.
+export const deleteLocalCopies = async (songId) => {
+  await Promise.all(
+    ['audio', 'reel'].map((kind) =>
+      RNBlobUtil.fs.unlink(getLocalDownloadPath(songId, kind)).catch(() => {}),
+    ),
+  );
+};

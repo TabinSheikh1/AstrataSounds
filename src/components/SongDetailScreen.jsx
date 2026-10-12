@@ -24,7 +24,9 @@ import UpgradePromptModal from './UpgradePromptModal';
 import ReelCreatorModal from './ReelCreatorModal';
 import DownloadSheet from './DownloadSheet';
 import TweakSongModal from './songCreation/TweakSongModal';
-import { toggleLikeSong, finalizeSong as finalizeSongApi } from '../api/songsService';
+import { toggleLikeSong, finalizeSong as finalizeSongApi, undoTweakSong } from '../api/songsService';
+import { getTweakState } from '../utils/tweakState';
+import { deleteLocalCopies } from '../utils/downloadSong';
 import { getErrorMessage } from '../utils/errorHandler';
 import { shareSongFile } from '../utils/shareSong';
 
@@ -74,6 +76,9 @@ const SongDetailScreen = () => {
     // Streamed through the authenticated /stream endpoint (not a static file URL) — playback
     // is unlimited for any logged-in user, but the raw audio is no longer publicly fetchable.
     const hasAudio  = !!currentSong.audioPath;
+    const myUserId  = useSelector((state) => state.auth?.user?.id);
+    // Owner check, remaining tweaks and undo availability — the limit comes from the server
+    const tweak = getTweakState(currentSong, myUserId);
     const audioUrl  = hasAudio ? `${API_BASE_URL}/songs/${currentSong.id}/stream` : null;
     // Cache-buster uses updatedAt so React Native's Image doesn't serve a stale cached version
     const artworkUrl = currentSong.imagePath
@@ -277,6 +282,8 @@ const SongDetailScreen = () => {
     const handleTweaked = async (updatedSong) => {
         setCurrentSong((prev) => ({ ...prev, ...updatedSong }));
         setActiveTrack('song');
+        // An offline copy is now the wrong version (and sharing reuses it)
+        await deleteLocalCopies(updatedSong.id ?? song.id);
         try {
             await TrackPlayer.reset();
             await TrackPlayer.add({
@@ -292,6 +299,28 @@ const SongDetailScreen = () => {
         } catch (e) {
             console.error('[Player] reload after tweak failed:', e);
         }
+    };
+
+    const handleUndoTweak = () => {
+        Alert.alert(
+            'Undo last tweak?',
+            'This goes back to the version before your last tweak and discards the tweaked one. The free tweak you used stays used.',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Undo',
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            const res = await undoTweakSong(currentSong.id);
+                            await handleTweaked(res?.data ?? res);
+                        } catch (e) {
+                            Alert.alert('Could not undo', getErrorMessage(e, 'Could not restore the previous version.'));
+                        }
+                    },
+                },
+            ],
+        );
     };
 
     const handleFinalize = () => {
@@ -595,33 +624,43 @@ const SongDetailScreen = () => {
                 )}
 
                 {/* Tweak / Finalize — draft-phase song editing, audio only */}
-                {hasAudio && (
+                {hasAudio && tweak.isOwner && (
                     currentSong.isFinalized ? (
                         <View style={styles.finalizedBadge}>
                             <MaterialIcons name="lock" size={13} color="rgba(255,255,255,0.4)" />
                             <Text style={styles.finalizedBadgeText}>Finalized — no more changes</Text>
                         </View>
                     ) : (
-                        <View style={styles.tweakRow}>
-                            <TouchableOpacity
-                                style={styles.tweakBtn}
-                                onPress={() => setTweakModalVisible(true)}
-                                activeOpacity={0.8}
-                            >
-                                <MaterialIcons name="auto-fix-high" size={15} color="#66cc33" />
-                                <Text style={styles.tweakBtnText}>
-                                    Tweak ({Math.max(0, 3 - (currentSong.freeTweaksUsed ?? 0))} free left)
-                                </Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                style={styles.finalizeBtn}
-                                onPress={handleFinalize}
-                                activeOpacity={0.8}
-                            >
-                                <MaterialIcons name="check-circle-outline" size={15} color="rgba(255,255,255,0.6)" />
-                                <Text style={styles.finalizeBtnText}>Finalize</Text>
-                            </TouchableOpacity>
-                        </View>
+                        <>
+                            <View style={styles.tweakRow}>
+                                <TouchableOpacity
+                                    testID="song-tweak-btn"
+                                    style={[styles.tweakBtn, !tweak.canTweak && { opacity: 0.45 }]}
+                                    onPress={() => setTweakModalVisible(true)}
+                                    disabled={!tweak.canTweak}
+                                    activeOpacity={0.8}
+                                >
+                                    <MaterialIcons name="auto-fix-high" size={15} color="#66cc33" />
+                                    <Text style={styles.tweakBtnText}>
+                                        {tweak.left > 0 ? `Tweak (${tweak.left} free left)` : 'No free tweaks left'}
+                                    </Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={styles.finalizeBtn}
+                                    onPress={handleFinalize}
+                                    activeOpacity={0.8}
+                                >
+                                    <MaterialIcons name="check-circle-outline" size={15} color="rgba(255,255,255,0.6)" />
+                                    <Text style={styles.finalizeBtnText}>Finalize</Text>
+                                </TouchableOpacity>
+                            </View>
+                            {tweak.canUndo && (
+                                <TouchableOpacity testID="song-undo-btn" style={styles.undoBtn} onPress={handleUndoTweak} activeOpacity={0.8}>
+                                    <MaterialIcons name="undo" size={14} color="rgba(255,255,255,0.6)" />
+                                    <Text style={styles.finalizeBtnText}>Undo last tweak</Text>
+                                </TouchableOpacity>
+                            )}
+                        </>
                     )
                 )}
 
@@ -934,6 +973,18 @@ const styles = StyleSheet.create({
         color: '#FBBF24',
         fontSize: 11,
         fontFamily: 'Oswald-Regular',
+    },
+    undoBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 6,
+        paddingVertical: 9,
+        marginTop: -6,
+        marginBottom: 16,
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.12)',
     },
     tweakRow: {
         flexDirection: 'row',

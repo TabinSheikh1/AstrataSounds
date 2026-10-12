@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
     View, Text, StyleSheet, Modal, TouchableOpacity, TextInput,
-    ScrollView, ActivityIndicator, Alert, KeyboardAvoidingView, Platform,
+    ScrollView, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Switch,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
@@ -9,17 +9,26 @@ import { LANGUAGES } from './constants';
 import GenrePickerModal from './GenrePickerModal';
 import MoodPickerModal from './MoodPickerModal';
 import { tweakSongAudio } from '../../api/songsService';
+import { waitForSongGeneration } from '../../utils/waitForSongGeneration';
 import { getErrorMessage } from '../../utils/errorHandler';
+import { getTweakState } from '../../utils/tweakState';
 
-const FREE_TWEAK_LIMIT = 3;
+const MIN_BPM = 40;
+const MAX_BPM = 220;
+const DEFAULT_BPM = 100;
 
 // Free, capped regeneration of a song's audio only (never the cover image) while it's
 // still in draft — see songs.service.ts tweakSong() for the server-side cap/lock.
+// The sheet opens pre-filled with the settings saved with the song (genre, style, mood,
+// language, tempo), so a tweak changes only what the user edits and everything else carries
+// over to the new version. Songs from before settings were saved open blank and need a genre.
 const TweakSongModal = ({ visible, onClose, song, onTweaked }) => {
     const [category, setCategory] = useState(null);
     const [styleText, setStyleText] = useState('');
     const [selectedMood, setSelectedMood] = useState(null);
     const [selectedLanguage, setSelectedLanguage] = useState('english');
+    const [tempoOn, setTempoOn] = useState(false);
+    const [bpm, setBpm] = useState(DEFAULT_BPM);
     const [showGenrePicker, setShowGenrePicker] = useState(false);
     const [showMoodPicker, setShowMoodPicker] = useState(false);
     const [submitting, setSubmitting] = useState(false);
@@ -31,25 +40,32 @@ const TweakSongModal = ({ visible, onClose, song, onTweaked }) => {
     const [aiRewriteLyrics, setAiRewriteLyrics] = useState(false);
     const [lyricsPrompt, setLyricsPrompt] = useState('');
 
-    const tweaksUsed = song?.freeTweaksUsed ?? 0;
-    const tweaksLeft = Math.max(0, FREE_TWEAK_LIMIT - tweaksUsed);
+    const tweak = getTweakState(song);
+    const saved = song?.generationSettings ?? null;
 
-    // Fresh form every time it's opened — there's nothing to prefill from (the original
-    // category/mood/prompt used to generate the song aren't persisted on the Song entity) —
-    // except the lyrics, which come straight from the song so they're ready to edit.
+    // Pre-fill from the song's saved settings every time the sheet opens, and the lyrics
+    // straight from the song so they're ready to edit.
     useEffect(() => {
         if (visible) {
-            setCategory(null);
-            setStyleText('');
-            setSelectedMood(null);
-            setSelectedLanguage('english');
+            setCategory(saved?.category ?? null);
+            setStyleText(saved?.prompt ?? '');
+            setSelectedMood(saved?.mood ?? null);
+            setSelectedLanguage(saved?.language ?? 'english');
+            setTempoOn(!!saved?.tempoBpm);
+            setBpm(saved?.tempoBpm ?? DEFAULT_BPM);
             setLyricsText(song?.lyrics ?? '');
             setAiRewriteLyrics(false);
             setLyricsPrompt('');
         }
-    }, [visible, song]);
+        // Only when the sheet opens — a background refresh of `song` must not wipe edits.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [visible]);
 
     const handleSubmit = async () => {
+        if (tweak.left <= 0) {
+            Alert.alert('No free tweaks left', 'Finalize this song to keep this version, or create a new song.');
+            return;
+        }
         if (!category) {
             Alert.alert('Genre required', 'Pick a genre for this tweak.');
             return;
@@ -68,14 +84,21 @@ const TweakSongModal = ({ visible, onClose, song, onTweaked }) => {
             const payload = {
                 category,
                 language: selectedLanguage,
-                ...(selectedMood ? { mood: selectedMood } : {}),
-                prompt: styleText.trim() || 'A beautiful well-crafted song',
+                // null (not omitted) tells the server to clear a saved mood / tempo
+                mood: selectedMood ?? null,
+                tempoBpm: tempoOn ? bpm : null,
+                // A blank style is left out so the song keeps its saved style instead of
+                // being overwritten with a generic placeholder.
+                ...(styleText.trim() ? { prompt: styleText.trim() } : {}),
                 ...(aiRewriteLyrics
                     ? { lyricsMode: 'ai', ...(lyricsPrompt.trim() ? { lyricsPrompt: lyricsPrompt.trim() } : {}) }
                     : { lyricsMode: 'manual', lyrics: lyricsText.trim() }),
             };
-            const res = await tweakSongAudio(song.id, payload);
-            onTweaked?.(res?.data ?? res);
+            // The server accepts the job and keeps working even if the phone locks; we watch
+            // the SAME song until its new version is ready (a tweak never creates a new song).
+            await tweakSongAudio(song.id, payload);
+            const updated = await waitForSongGeneration(song.id);
+            onTweaked?.(updated);
             onClose();
         } catch (e) {
             Alert.alert('Tweak Failed', getErrorMessage(e, 'Could not regenerate the song. Please try again.'));
@@ -84,8 +107,11 @@ const TweakSongModal = ({ visible, onClose, song, onTweaked }) => {
         }
     };
 
+    // Can't dismiss while the tweak is running.
+    const guardedClose = () => { if (!submitting) onClose(); };
+
     return (
-        <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+        <Modal visible={visible} transparent animationType="slide" onRequestClose={guardedClose}>
             <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'padding' : undefined}
                 style={styles.backdrop}
@@ -97,10 +123,11 @@ const TweakSongModal = ({ visible, onClose, song, onTweaked }) => {
                         <View style={{ flex: 1 }}>
                             <Text style={styles.title}>Tweak Song</Text>
                             <Text style={styles.subtitle}>
-                                {tweaksLeft} of {FREE_TWEAK_LIMIT} free tweaks left — cover art stays as-is; edit the lyrics below or let AI rewrite them
+                                {tweak.left} of {tweak.limit} free tweaks left — cover art stays as-is; edit the lyrics below or let AI rewrite them
+                                {saved ? '. Starting from your song\'s current settings: change only what you want.' : ''}
                             </Text>
                         </View>
-                        <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
+                        <TouchableOpacity style={[styles.closeBtn, submitting && { opacity: 0.3 }]} onPress={guardedClose} disabled={submitting}>
                             <MaterialIcons name="close" size={18} color="rgba(255,255,255,0.5)" />
                         </TouchableOpacity>
                     </View>
@@ -205,8 +232,36 @@ const TweakSongModal = ({ visible, onClose, song, onTweaked }) => {
                             })}
                         </View>
 
+                        <View style={styles.tempoRow}>
+                            <View style={{ flex: 1 }}>
+                                <Text style={styles.fieldLabel}>Tempo</Text>
+                                <Text style={styles.tempoNote}>
+                                    {tempoOn ? 'Keep the song at about this tempo.' : 'No fixed tempo — the music model decides.'}
+                                </Text>
+                            </View>
+                            <Switch
+                                testID="tweak-tempo-switch"
+                                value={tempoOn}
+                                onValueChange={setTempoOn}
+                                trackColor={{ false: 'rgba(255,255,255,0.2)', true: '#66cc33' }}
+                                thumbColor="#fff"
+                            />
+                        </View>
+                        {tempoOn && (
+                            <View style={styles.bpmRow}>
+                                <TouchableOpacity testID="tweak-bpm-down" style={styles.bpmBtn} onPress={() => setBpm((b) => Math.max(MIN_BPM, b - 5))}>
+                                    <MaterialIcons name="remove" size={20} color="#fff" />
+                                </TouchableOpacity>
+                                <Text testID="tweak-bpm" style={styles.bpmValue}>{bpm}<Text style={styles.bpmUnit}> BPM</Text></Text>
+                                <TouchableOpacity testID="tweak-bpm-up" style={styles.bpmBtn} onPress={() => setBpm((b) => Math.min(MAX_BPM, b + 5))}>
+                                    <MaterialIcons name="add" size={20} color="#fff" />
+                                </TouchableOpacity>
+                            </View>
+                        )}
+
                         <TouchableOpacity
-                            style={styles.submitBtn}
+                            testID="tweak-submit"
+                            style={[styles.submitBtn, tweak.left <= 0 && { opacity: 0.4 }]}
                             onPress={handleSubmit}
                             activeOpacity={0.85}
                             disabled={submitting}
@@ -369,6 +424,12 @@ const styles = StyleSheet.create({
     aiToggleBtnTextActive: {
         color: '#66cc33',
     },
+    tempoRow: { flexDirection: 'row', alignItems: 'center', marginTop: 18, gap: 10 },
+    tempoNote: { color: 'rgba(255,255,255,0.5)', fontSize: 11.5, lineHeight: 16 },
+    bpmRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 22, marginTop: 12 },
+    bpmBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center' },
+    bpmValue: { color: '#fff', fontSize: 30, fontWeight: '700', minWidth: 120, textAlign: 'center' },
+    bpmUnit: { color: 'rgba(255,255,255,0.5)', fontSize: 14, fontWeight: '500' },
     aiRewriteHint: {
         color: 'rgba(255,255,255,0.4)',
         fontFamily: 'Oswald-Regular',

@@ -51,6 +51,12 @@ export const tweakSongAudio = async (id, payload) => {
   return response.data;
 };
 
+// Restores the audio the last tweak replaced (one level of undo).
+export const undoTweakSong = async (id) => {
+  const response = await API.post(`/songs/${id}/undo-tweak`);
+  return response.data;
+};
+
 // Locks the song — no more tweaks or regeneration afterward. Irreversible.
 export const finalizeSong = async (id) => {
   const response = await API.post(`/songs/${id}/finalize`);
