@@ -11,7 +11,6 @@ import {
     Platform,
     ScrollView,
     Alert,
-    Share,
     PanResponder,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
@@ -27,6 +26,7 @@ import DownloadSheet from './DownloadSheet';
 import TweakSongModal from './songCreation/TweakSongModal';
 import { toggleLikeSong, finalizeSong as finalizeSongApi } from '../api/songsService';
 import { getErrorMessage } from '../utils/errorHandler';
+import { shareSongFile } from '../utils/shareSong';
 
 const { width, height } = Dimensions.get('window');
 const ALBUM_SIZE = width - 64;
@@ -340,16 +340,22 @@ const SongDetailScreen = () => {
         setDownloadSheetVisible(true);
     };
 
+    // Shares the song itself as an MP3 file (see utils/shareSong), not just a text blurb.
+    const [sharing, setSharing] = useState(false);
     const handleShare = async () => {
+        if (sharing) return;
+        if (!hasAudio) {
+            Alert.alert('No Audio', 'This song has no audio generated yet.');
+            return;
+        }
+        setSharing(true);
         try {
-            // audioUrl now points at an authenticated streaming endpoint (Bearer token
-            // required), so it's meaningless to a recipient outside the app — share the
-            // song by name only rather than a link that will 401 for them.
-            await Share.share({
-                title: song.title ?? 'Check out this song',
-                message: `Check out "${song.title ?? 'this song'}" on StrataSound Music`,
-            });
-        } catch (_) {}
+            await shareSongFile(currentSong);
+        } catch (e) {
+            Alert.alert('Share Failed', e?.message || 'Could not share the song. Please try again.');
+        } finally {
+            setSharing(false);
+        }
     };
 
     const duration = progress.duration || 0;
@@ -558,7 +564,7 @@ const SongDetailScreen = () => {
                     </TouchableOpacity>
 
                     {/* Share */}
-                    <TouchableOpacity style={styles.secondaryBtn} onPress={handleShare}>
+                    <TouchableOpacity style={[styles.secondaryBtn, sharing && { opacity: 0.5 }]} onPress={handleShare} disabled={sharing}>
                         <MaterialIcons name="share" size={20} color="rgba(255,255,255,0.65)" />
                     </TouchableOpacity>
 
