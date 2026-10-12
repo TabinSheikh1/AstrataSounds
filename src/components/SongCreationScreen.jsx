@@ -18,6 +18,7 @@ import { styles } from './songCreation/songCreationStyles';
 import MoodPickerModal from './songCreation/MoodPickerModal';
 import GenrePickerModal from './songCreation/GenrePickerModal';
 import GeneratingOverlay from './songCreation/GeneratingOverlay';
+import VoiceRecorderModal from './songCreation/VoiceRecorderModal';
 import LyricsTab from './songCreation/LyricsTab';
 import CoverTab from './songCreation/CoverTab';
 import GenerateTab from './songCreation/GenerateTab';
@@ -98,6 +99,8 @@ const SongCreationScreen = () => {
     const [selectedCategory, setSelectedCategory] = useState('Pop');
     const [lyricsText, setLyricsText]           = useState('');
     const [lyricsMode, setLyricsMode]           = useState('manual');
+    const [tempoBpm, setTempoBpm]               = useState(null);
+    const [showVoiceModal, setShowVoiceModal]   = useState(false);
     const [selectedMood, setSelectedMood]       = useState(null);
     const [lyricsPrompt, setLyricsPrompt]       = useState('');
     const [showMoodPicker, setShowMoodPicker]   = useState(false);
@@ -160,6 +163,16 @@ const SongCreationScreen = () => {
         setShowMoodPicker(false);
     };
 
+    // Lyrics (and optionally a tempo) extracted from a voice recording — the user has
+    // already reviewed/edited them in the modal, so they go in as manual lyrics.
+    const handleVoiceLyrics = ({ lyrics, tempoBpm: bpm, language: spoken }) => {
+        if (spoken) setSelectedLanguage(spoken); // the lyrics are in the language they chose to speak
+        setLyricsText(lyrics);
+        setLyricsMode('manual');
+        setSelectedMood(null);
+        setTempoBpm(bpm ?? null);
+    };
+
     const handleGenreSelect = (category) => {
         setSelectedCategory(category);
         setShowGenrePicker(false);
@@ -179,6 +192,7 @@ const SongCreationScreen = () => {
         setSelectedCategory('Pop');
         setLyricsText('');
         setLyricsMode('manual');
+        setTempoBpm(null);
         setSelectedMood(null);
         setLyricsPrompt('');
         setSelectedSongLength('full');
@@ -246,6 +260,7 @@ const SongCreationScreen = () => {
                 language: selectedLanguage,
                 songLength: selectedSongLength,
                 ...(isManualLyrics ? { lyrics: lyricsText.trim() } : {}),
+                ...(tempoBpm ? { tempoBpm } : {}),
                 ...(!isManualLyrics && selectedMood && !selectedVibeId ? { mood: selectedMood } : {}),
                 ...(!isManualLyrics && lyricsPrompt.trim() ? { lyricsPrompt: lyricsPrompt.trim() } : {}),
                 ...(selectedVibeId ? { vibeId: selectedVibeId } : { prompt: promptValue || 'A beautiful well-crafted song' }),
@@ -285,6 +300,8 @@ const SongCreationScreen = () => {
                     selectedLanguage={selectedLanguage} setSelectedLanguage={setSelectedLanguage}
                     vibes={vibes} selectedVibeId={selectedVibeId} setSelectedVibeId={setSelectedVibeId}
                     vibesLoading={vibesLoading}
+                    onRecordVoice={() => setShowVoiceModal(true)}
+                    tempoBpm={tempoBpm} setTempoBpm={setTempoBpm}
                 />
             </Animated.View>
         );
@@ -387,6 +404,12 @@ const SongCreationScreen = () => {
                 selectedCategory={selectedCategory}
                 onSelect={handleGenreSelect}
                 onClose={() => setShowGenrePicker(false)}
+            />
+            <VoiceRecorderModal
+                visible={showVoiceModal}
+                onClose={() => setShowVoiceModal(false)}
+                onUse={handleVoiceLyrics}
+                language={selectedLanguage}
             />
             <GeneratingOverlay visible={generating} step={genStep} />
         </ImageBackground>

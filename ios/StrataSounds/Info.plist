@@ -46,6 +46,8 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>StrataSound Music uses your microphone to record your voice so we can turn what you say or sing into song lyrics. Recordings are deleted right after the lyrics are extracted.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Strata Sound Music requires access to your photo library to allow users to upload and customize profile images and media content.</string>
 	<key>RCTNewArchEnabled</key>

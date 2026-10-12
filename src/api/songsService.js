@@ -1,4 +1,5 @@
 import API from "./axiosInstance";
+import { toFileUri } from "../utils/filePath";
 
 export const getMySongs = async () => {
   const response = await API.get("/songs/my");
@@ -76,4 +77,21 @@ export const createReel = async (id, payload) => {
 export const getLeaderboard = async (limit = 50) => {
   const response = await API.get(`/leaderboard?limit=${limit}`);
   return response.data;
+};
+
+// Uploads a short voice recording and returns { text, language, durationSeconds,
+// wordsPerMinute, suggestedBpm }. The server deletes the audio right after transcribing.
+export const transcribeVoice = async (fileUri, language, signal) => {
+  const uri = toFileUri(fileUri);
+  const ext = (uri.split('.').pop() || 'm4a').toLowerCase();
+  const formData = new FormData();
+  formData.append('audio', { uri, name: `voice.${ext}`, type: ext === 'mp3' ? 'audio/mpeg' : 'audio/mp4' });
+  if (language) formData.append('language', language);
+
+  const response = await API.post('/songs/transcribe', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 120000,
+    signal, // lets the user cancel a slow upload
+  });
+  return response.data?.data ?? response.data;
 };

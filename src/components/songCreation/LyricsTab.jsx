@@ -22,6 +22,7 @@ const LyricsTab = ({
     setShowMoodPicker,
     selectedLanguage, setSelectedLanguage,
     vibes, selectedVibeId, setSelectedVibeId, vibesLoading,
+    onRecordVoice, tempoBpm, setTempoBpm,
 }) => (
     <ScrollView style={styles.tabContent} contentContainerStyle={styles.tabContentInner} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
 
@@ -186,16 +187,41 @@ const LyricsTab = ({
                     <Text style={styles.charCount}>{lyricsText.length} / 3000</Text>
                 </>
             )}
-            <TouchableOpacity style={styles.aiBtn} onPress={() => setShowMoodPicker(true)}>
-                <LinearGradient
-                    colors={['rgba(102,204,51,0.25)', 'rgba(4,126,201,0.25)']}
-                    start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-                    style={styles.aiBtnGradient}
-                >
-
-                    <Text style={styles.aiBtnText}>Write Lyrics For Me</Text>
-                </LinearGradient>
-            </TouchableOpacity>
+            <View style={styles.lyricActions}>
+                <TouchableOpacity style={styles.lyricActionBtn} onPress={() => setShowMoodPicker(true)} activeOpacity={0.8}>
+                    <LinearGradient
+                        colors={['rgba(102,204,51,0.25)', 'rgba(4,126,201,0.25)']}
+                        start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                        style={styles.lyricActionGradient}
+                    >
+                        <View style={styles.lyricActionContent}>
+                            <MaterialIcons name="auto-awesome" size={18} color="#66cc33" />
+                            <Text style={styles.lyricActionText}>Write Lyrics For Me</Text>
+                        </View>
+                    </LinearGradient>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.lyricActionBtn} onPress={onRecordVoice} activeOpacity={0.8}>
+                    <LinearGradient
+                        colors={['rgba(102,204,51,0.25)', 'rgba(4,126,201,0.25)']}
+                        start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                        style={styles.lyricActionGradient}
+                    >
+                        <View style={styles.lyricActionContent}>
+                            <MaterialIcons name="mic" size={18} color="#66cc33" />
+                            <Text style={styles.lyricActionText}>Record Lyrics With My Voice</Text>
+                        </View>
+                    </LinearGradient>
+                </TouchableOpacity>
+            </View>
+            {tempoBpm ? (
+                <View style={styles.aiLyricsSelected}>
+                    <MaterialIcons name="speed" size={16} color="#66cc33" />
+                    <Text style={styles.aiLyricsSelectedText}>Tempo: about {tempoBpm} BPM</Text>
+                    <TouchableOpacity onPress={() => setTempoBpm(null)} style={styles.aiLyricsClear}>
+                        <MaterialIcons name="close" size={14} color="rgba(255,255,255,0.5)" />
+                    </TouchableOpacity>
+                </View>
+            ) : null}
         </GlassBox>
 
         {/* Song Language */}

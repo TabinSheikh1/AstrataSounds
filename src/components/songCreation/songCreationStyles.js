@@ -321,6 +321,30 @@ export const styles = StyleSheet.create({
         padding: 10,
     },
 
+    // Lyrics action buttons (Write for me / Record voice) — identical shape, full width
+    lyricActions: { marginTop: 12, gap: 10 },
+    lyricActionBtn: { borderRadius: 22, overflow: 'hidden' },
+    // Gradient carries visuals only; all sizing/spacing lives on the inner content View
+    lyricActionGradient: {
+        borderRadius: 22,
+        borderWidth: 1,
+        borderColor: 'rgba(102,204,51,0.35)',
+    },
+    lyricActionContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        height: 44,
+        paddingHorizontal: 16,
+    },
+    lyricActionText: {
+        color: '#66cc33',
+        fontSize: 13,
+        fontFamily: 'Oswald-Bold',
+        letterSpacing: 0.5,
+    },
+
     // ── Gender buttons ─────────────────────────────────────────
     genderRow: { flexDirection: 'row', gap: 10, marginBottom: 4 },
     genderBtn: {
