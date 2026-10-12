@@ -252,7 +252,7 @@ const MenuScreen = ({ visible, onClose }) => {
                             <View style={styles.card}>
                                 <MenuItem icon={Zap} label="Upgrade Plan" onPress={() => navigateTo('PricingScreen')} />
                                 <Separator />
-                                <MenuItem icon={Share2} label="Share Musicful" onPress={() => navigateTo('ShareScreen')} />
+                                <MenuItem icon={Share2} label="Share StrataSound Music" onPress={() => navigateTo('ShareScreen')} />
                                 <Separator />
                                 <MenuItem icon={MessageSquare} label="Help Us Improve" onPress={() => navigateTo('FeedbackScreen')} />
                                 <Separator />
