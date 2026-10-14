@@ -17,7 +17,7 @@ const SECTIONS = [
       { label: 'Account Data', desc: 'Name, email address, and password when you register.' },
       { label: 'Profile Data', desc: 'Optional profile picture, bio, and preferences you provide.' },
       { label: 'Usage Data', desc: 'Songs generated, playlists created, genres selected, and in-app interactions.' },
-      { label: 'Payment Data', desc: 'For purchases made through the App Store or Google Play, payment is handled entirely by Apple or Google. We never receive or store your card details, only a confirmation of purchase, transaction ID, and subscription status. Purchases made via our website are processed by Stripe; we never store full card numbers.' },
+      { label: 'Payment Data', desc: 'For purchases made through the App Store or Google Play, payment is handled entirely by Apple or Google. We never receive or store your card details, only a confirmation of purchase, transaction ID, and subscription status.' },
       { label: 'Device Data', desc: 'Device type, OS version, and app version for compatibility and debugging.' },
     ],
   },
@@ -39,7 +39,6 @@ const SECTIONS = [
     color: '#f59e0b',
     items: [
       { label: 'Apple / Google', desc: 'Payment processing for in-app purchases and subscriptions. Subject to Apple\'s and Google\'s own privacy policies.' },
-      { label: 'Stripe', desc: 'Payment processing for website purchases. Subject to Stripe\'s own privacy policy.' },
       { label: 'AWS / Cloud', desc: 'Secure cloud infrastructure for data storage and processing.' },
       { label: 'OpenAI', desc: 'AI content generation. Prompts are sent to OpenAI APIs per their data policies.' },
       { label: 'Analytics', desc: 'Anonymized crash and usage reporting to improve app stability.' },

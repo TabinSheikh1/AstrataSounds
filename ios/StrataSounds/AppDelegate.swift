@@ -32,8 +32,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     return true
   }
 
-  // Forwards custom-scheme opens (e.g. strataSounds://subscription/success from the
-  // Stripe checkout redirect) into React Native's Linking module. Without this,
+  // Forwards custom-scheme opens (e.g. strataSounds://billing) into React Native's Linking module. Without this,
   // iOS opens the app but JS never receives the URL — getInitialURL() stays null
   // and no 'url' event fires.
   func application(

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -9,8 +9,6 @@ import {
   StatusBar,
   Platform,
   Alert,
-  Modal,
-  TouchableWithoutFeedback,
   Linking,
   ImageBackground,
 } from 'react-native';
@@ -18,13 +16,6 @@ import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useCallback } from 'react';
 import { useSubscription } from '../hooks/useSubscription';
-import {
-  cancelSubscription,
-  reactivateSubscription,
-  openBillingPortal,
-  creditPackCheckout,
-} from '../api/subscriptionsService';
-import { getErrorMessage } from '../utils/errorHandler';
 
 const STATUS_CONFIG = {
   active: { label: 'Active', color: '#66cc33', bg: 'rgba(102,204,51,0.12)' },
@@ -44,109 +35,6 @@ const fmtDate = (iso) => {
   });
 };
 
-const CancelModal = ({ visible, periodEnd, onCancel, onKeep, loading }) => (
-  <Modal
-    visible={visible}
-    transparent
-    animationType="fade"
-    onRequestClose={onKeep}
-    statusBarTranslucent
-  >
-    <TouchableWithoutFeedback onPress={onKeep}>
-      <View style={cmStyles.backdrop} />
-    </TouchableWithoutFeedback>
-    <View style={cmStyles.box}>
-      <View style={cmStyles.iconWrap}>
-        <MaterialIcons name="warning" size={28} color="#FBBF24" />
-      </View>
-      <Text style={cmStyles.title}>Cancel Subscription?</Text>
-      <Text style={cmStyles.body}>
-        Your plan stays active until{' '}
-        <Text style={cmStyles.bold}>{fmtDate(periodEnd)}</Text>. After that you'll
-        revert to Spark (free).
-      </Text>
-      <TouchableOpacity
-        onPress={onCancel}
-        disabled={loading}
-        style={cmStyles.cancelBtn}
-        activeOpacity={0.85}
-      >
-        {loading ? (
-          <ActivityIndicator color="#fff" size="small" />
-        ) : (
-          <Text style={cmStyles.cancelBtnText}>Yes, Cancel</Text>
-        )}
-      </TouchableOpacity>
-      <TouchableOpacity onPress={onKeep} style={cmStyles.keepBtn}>
-        <Text style={cmStyles.keepBtnText}>Keep My Plan</Text>
-      </TouchableOpacity>
-    </View>
-  </Modal>
-);
-
-const cmStyles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.65)' },
-  box: {
-    position: 'absolute',
-    top: '30%',
-    left: 24,
-    right: 24,
-    backgroundColor: '#0d1117',
-    borderRadius: 20,
-    padding: 24,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
-    alignItems: 'center',
-  },
-  iconWrap: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: 'rgba(251,191,36,0.12)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 14,
-  },
-  title: {
-    color: '#fff',
-    fontSize: 18,
-    fontFamily: 'Oswald-Bold',
-    letterSpacing: 0.3,
-    marginBottom: 10,
-  },
-  body: {
-    color: 'rgba(255,255,255,0.55)',
-    fontSize: 14,
-    fontFamily: 'Oswald-Regular',
-    textAlign: 'center',
-    lineHeight: 20,
-    marginBottom: 20,
-  },
-  bold: { color: '#fff', fontFamily: 'Oswald-Bold' },
-  cancelBtn: {
-    backgroundColor: '#EF4444',
-    borderRadius: 12,
-    padding: 14,
-    width: '100%',
-    alignItems: 'center',
-    marginBottom: 10,
-    minHeight: 48,
-    justifyContent: 'center',
-  },
-  cancelBtnText: {
-    color: '#fff',
-    fontSize: 15,
-    fontFamily: 'Oswald-Bold',
-    letterSpacing: 0.5,
-  },
-  keepBtn: { padding: 12, width: '100%', alignItems: 'center' },
-  keepBtnText: {
-    color: 'rgba(255,255,255,0.5)',
-    fontSize: 14,
-    fontFamily: 'Oswald-Regular',
-  },
-});
-
 const BillingScreen = () => {
   const navigation = useNavigation();
   const {
@@ -165,10 +53,6 @@ const BillingScreen = () => {
   // Credits display helpers (100 tokens = 1 full-song credit)
   const toCredits = (t) => (t / 100).toFixed(1).replace(/\.0$/, '');
 
-  const [cancelModalVisible, setCancelModalVisible] = useState(false);
-  const [actionLoading, setActionLoading] = useState(false);
-  const [portalLoading, setPortalLoading] = useState(false);
-  const [buyTokensLoading, setBuyTokensLoading] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -187,70 +71,20 @@ const BillingScreen = () => {
   const downloadsUsed = subscription?.downloadsUsedThisPeriod ?? 0;
   const downloadLimit = plan?.monthlyDownloadLimit ?? 5;
 
-  const handleCancel = async () => {
-    setActionLoading(true);
-    try {
-      await cancelSubscription();
-      await refreshAll();
-      setCancelModalVisible(false);
-      Alert.alert('Subscription Canceled', `Your subscription will end on ${periodEndFmt}.`);
-    } catch (e) {
-      Alert.alert('Error', getErrorMessage(e, 'Could not cancel. Please try again.'));
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleReactivate = async () => {
-    setActionLoading(true);
-    try {
-      await reactivateSubscription();
-      await refreshAll();
-      Alert.alert('Reactivated', 'Your subscription has been reactivated.');
-    } catch (e) {
-      Alert.alert('Error', getErrorMessage(e, 'Could not reactivate. Please try again.'));
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleBuyTokens = async () => {
-    setBuyTokensLoading(true);
-    try {
-      // Default to 5-song pack from billing screen; full pack selection is on PricingScreen
-      const res = await creditPackCheckout({
-        packSize: 5,
-        successUrl: 'strataSounds://billing?tokenPurchase=success',
-        cancelUrl: 'strataSounds://billing?tokenPurchase=cancel',
-      });
-      const url = res.data?.data?.url ?? res.data?.url;
-      if (url) {
-        await Linking.openURL(url);
-      } else {
-        Alert.alert('Error', 'Could not open checkout. Please try again.');
-      }
-    } catch (e) {
-      Alert.alert('Error', getErrorMessage(e, 'Could not start purchase. Please try again.'));
-    } finally {
-      setBuyTokensLoading(false);
-    }
-  };
-
-  const handlePortal = async () => {
-    setPortalLoading(true);
-    try {
-      const res = await openBillingPortal('strataSounds://settings/billing');
-      const url = res.data?.data?.url ?? res.data?.url;
-      if (url) {
-        await Linking.openURL(url);
-      } else {
-        Alert.alert('Error', 'Could not open billing portal.');
-      }
-    } catch (e) {
-      Alert.alert('Error', getErrorMessage(e, 'Could not open billing portal.'));
-    } finally {
-      setPortalLoading(false);
-    }
+  // Subscriptions are bought through the App Store / Google Play, so cancelling, changing
+  // the payment method and reactivating all happen in the store's own settings.
+  const openStoreSubscriptions = () => {
+    const url = Platform.OS === 'ios'
+      ? 'https://apps.apple.com/account/subscriptions'
+      : 'https://play.google.com/store/account/subscriptions';
+    Linking.openURL(url).catch(() => {
+      Alert.alert(
+        'Could not open settings',
+        Platform.OS === 'ios'
+          ? 'Open Settings → your name → Subscriptions.'
+          : 'Open the Play Store → profile icon → Payments & subscriptions → Subscriptions.',
+      );
+    });
   };
 
   return (
@@ -281,12 +115,12 @@ const BillingScreen = () => {
           {(status === 'past_due') && (
             <TouchableOpacity
               style={styles.pastDueBanner}
-              onPress={handlePortal}
+              onPress={openStoreSubscriptions}
               activeOpacity={0.85}
             >
               <MaterialIcons name="warning" size={16} color="#FBBF24" />
               <Text style={styles.pastDueBannerText}>
-                Payment failed — update your payment method to avoid losing access
+                Payment failed — update your payment method in your store account to avoid losing access
               </Text>
               <MaterialIcons name="chevron-right" size={16} color="#FBBF24" />
             </TouchableOpacity>
@@ -361,42 +195,6 @@ const BillingScreen = () => {
             )}
           </View>
 
-          {/* Credit wallet (purchased packs) */}
-          {/* <View style={styles.sectionCard}>
-            <Text style={styles.sectionLabel}>CREDIT WALLET</Text>
-            <View style={styles.tokenRow}>
-              <View>
-                <Text style={[styles.tokenValue, { color: '#66cc33', fontSize: 24 }]}>
-                  {toCredits(purchasedBalance)}
-                  <Text style={styles.tokenOf}> pack credits</Text>
-                </Text>
-                <Text style={styles.tokenOf}>Total available: {toCredits(totalBalance)} credits</Text>
-              </View>
-              <TouchableOpacity
-                onPress={handleBuyTokens}
-                disabled={buyTokensLoading}
-                activeOpacity={0.85}
-              >
-                <LinearGradient
-                  colors={['#66cc33', '#047ec9']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.buyTokensBtn}
-                >
-                  {buyTokensLoading ? (
-                    <ActivityIndicator color="#fff" size="small" />
-                  ) : (
-                    <>
-                      
-                      <Text style={styles.buyTokensText}>5 songs{'\n'}$7.99</Text>
-                    </>
-                  )}
-                </LinearGradient>
-              </TouchableOpacity>
-            </View>
-            <Text style={styles.resetText}>Purchased song credits never expire or reset.</Text>
-          </View> */}
-
           {/* Downloads */}
           {plan && (
             <View style={styles.sectionCard}>
@@ -429,63 +227,17 @@ const BillingScreen = () => {
 
             <View style={styles.actionDivider} />
 
-            {/* Manage payment method */}
+            {/* Manage / cancel — handled by the store that billed the subscription */}
             {isPaid && (
-              <>
-                <TouchableOpacity
-                  style={styles.actionRow}
-                  onPress={handlePortal}
-                  disabled={portalLoading}
-                  activeOpacity={0.75}
-                >
-                  <View style={styles.actionLeft}>
-                    <MaterialIcons name="credit-card" size={20} color="#047ec9" />
-                    <Text style={styles.actionText}>Manage Payment Method</Text>
-                  </View>
-                  {portalLoading ? (
-                    <ActivityIndicator size="small" color="#047ec9" />
-                  ) : (
-                    <MaterialIcons name="chevron-right" size={22} color="rgba(255,255,255,0.35)" />
-                  )}
-                </TouchableOpacity>
-                <View style={styles.actionDivider} />
-              </>
-            )}
-
-            {/* Reactivate (if cancel-at-end) */}
-            {cancelAtEnd && (
-              <>
-                <TouchableOpacity
-                  style={styles.actionRow}
-                  onPress={handleReactivate}
-                  disabled={actionLoading}
-                  activeOpacity={0.75}
-                >
-                  <View style={styles.actionLeft}>
-                    <MaterialIcons name="refresh" size={20} color="#66cc33" />
-                    <Text style={styles.actionText}>Reactivate Subscription</Text>
-                  </View>
-                  {actionLoading ? (
-                    <ActivityIndicator size="small" color="#66cc33" />
-                  ) : (
-                    <MaterialIcons name="chevron-right" size={22} color="rgba(255,255,255,0.35)" />
-                  )}
-                </TouchableOpacity>
-                <View style={styles.actionDivider} />
-              </>
-            )}
-
-            {/* Cancel */}
-            {isPaid && !cancelAtEnd && (
               <TouchableOpacity
                 style={styles.actionRow}
-                onPress={() => setCancelModalVisible(true)}
+                onPress={openStoreSubscriptions}
                 activeOpacity={0.75}
               >
                 <View style={styles.actionLeft}>
-                  <MaterialIcons name="cancel" size={20} color="#EF4444" />
-                  <Text style={[styles.actionText, { color: '#EF4444' }]}>
-                    Cancel Subscription
+                  <MaterialIcons name="credit-card" size={20} color="#047ec9" />
+                  <Text style={styles.actionText}>
+                    {Platform.OS === 'ios' ? 'Manage in App Store' : 'Manage in Google Play'}
                   </Text>
                 </View>
                 <MaterialIcons name="chevron-right" size={22} color="rgba(255,255,255,0.35)" />
@@ -495,13 +247,6 @@ const BillingScreen = () => {
         </ScrollView>
       )}
 
-      <CancelModal
-        visible={cancelModalVisible}
-        periodEnd={periodEnd}
-        onCancel={handleCancel}
-        onKeep={() => setCancelModalVisible(false)}
-        loading={actionLoading}
-      />
     </ImageBackground>
   );
 };
@@ -658,24 +403,6 @@ const styles = StyleSheet.create({
   },
 
   // Buy tokens
-  buyTokensBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    // paddingHorizontal: 12,
-    // paddingVertical: 10,
-    borderRadius: 12,
-    minWidth: 90,
-    justifyContent: 'center',
-  },
-  buyTokensText: {
-    color: '#fff',
-    fontSize: 12,
-    fontFamily: 'Oswald-Bold',
-    letterSpacing: 0.3,
-    textAlign: 'center',
-    padding:12
-  },
 
   // Downloads
   downloadsValue: {

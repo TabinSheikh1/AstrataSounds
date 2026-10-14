@@ -23,9 +23,9 @@ const Particle = ({ style }) => (
 
 const COLORS = ['#66cc33', '#047ec9', '#FBBF24', '#fff', '#0066CC'];
 
-// Plan activation happens via an async Stripe webhook, which can land after
-// (not before) the OS finishes the deep-link redirect back into the app —
-// so we poll briefly instead of trusting a single one-shot refetch.
+// Plan activation happens once the backend has verified the purchase with the store,
+// which can land after this screen opens — so we poll briefly instead of trusting a
+// single one-shot refetch.
 const POLL_INTERVAL_MS = 2000;
 const MAX_POLL_ATTEMPTS = 6; // ~12s total before we stop waiting and show a softer message
 

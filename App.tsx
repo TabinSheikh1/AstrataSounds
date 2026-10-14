@@ -20,19 +20,7 @@ const navigate = (name: string, params?: object) => {
 const resolveDeepLink = (url: string | null) => {
   if (!url) return;
 
-  // strataSounds://subscription/success  →  SubscriptionSuccessScreen
-  if (url.includes('subscription/success')) {
-    navigate('SubscriptionSuccessScreen');
-    return;
-  }
-
-  // strataSounds://subscription/cancel  →  do nothing (stay on current screen)
-  if (url.includes('subscription/cancel')) {
-    return;
-  }
-
-  // strataSounds://billing  /  strataSounds://billing?tokenPurchase=success
-  // strataSounds://settings/billing
+  // strataSounds://billing  /  strataSounds://settings/billing
   if (url.includes('billing')) {
     navigate('BillingScreen');
     return;
