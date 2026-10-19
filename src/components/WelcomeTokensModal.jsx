@@ -13,7 +13,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import { Gift, Sparkles } from 'lucide-react-native';
 import { useDispatch } from 'react-redux';
 import { dismissWelcomeModal } from '../store/slices/authSlice';
-import { navigationRef } from '../../App';
+import { navigationRef } from '../navigation/navigationRef';
 
 const FREE_TOKENS = 500;
 

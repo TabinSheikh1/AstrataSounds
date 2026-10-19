@@ -1,21 +1,14 @@
 import React, { useEffect, useRef } from 'react';
 import { Linking } from 'react-native';
-import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
+import { NavigationContainer } from '@react-navigation/native';
 import AppNavigator from './src/navigation/AppNavigator';
+import { navigationRef, navigate } from './src/navigation/navigationRef';
 import { tabBarStore } from './src/navigation/tabBarStore';
 import { setupPlayer } from './src/player/setupPlayer';
 import { initIAP, endIAP } from './src/iap/iapService';
 import { Provider } from 'react-redux';
 import { store, persistor } from './src/store/store';
 import { PersistGate } from 'redux-persist/integration/react';
-
-export const navigationRef = createNavigationContainerRef<any>();
-
-const navigate = (name: string, params?: object) => {
-  if (navigationRef.isReady()) {
-    navigationRef.navigate(name, params);
-  }
-};
 
 const resolveDeepLink = (url: string | null) => {
   if (!url) return;
