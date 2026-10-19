@@ -54,6 +54,15 @@ export const getErrorMessage = (error, fallback = GENERIC_ERROR_MESSAGE) => {
     console.error('[API Error]', error?.response?.status, error?.response?.data ?? error?.message ?? error);
   }
 
+  // waitForSongGeneration rejects with a plain Error (marked isGenerationFailure), not an
+  // axios error — there was no failed request, the job we were polling just finished
+  // unsuccessfully, and its real reason is in error.message (from the song's
+  // generationError). Without this check it fell into the `!error.response` branch below
+  // and showed "Unable to connect..." for every generation failure, no matter the cause.
+  if (error?.isGenerationFailure) {
+    return isSafeMessage(error.message) ? error.message : fallback;
+  }
+
   if (!error?.response) {
     return CONNECTION_ERROR_MESSAGE;
   }
