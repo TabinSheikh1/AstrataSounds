@@ -14,9 +14,11 @@ import {
 import LinearGradient from 'react-native-linear-gradient';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
+import { useSelector } from 'react-redux';
+import TrackPlayer, { usePlaybackState, useActiveTrack, State, RepeatMode } from 'react-native-track-player';
 import { getPlaylistById, toggleLikePlaylist } from '../api/playlistsService';
 import { getErrorMessage } from '../utils/errorHandler';
-import { SERVER_URL as FILE_BASE } from '../config/api';
+import { SERVER_URL as FILE_BASE, API_BASE_URL } from '../config/api';
 
 const formatCount = (n) => {
     if (!n) return '0';
@@ -25,8 +27,15 @@ const formatCount = (n) => {
     return String(n);
 };
 
-const SongRow = ({ item, onPress }) => (
-    <TouchableOpacity style={s.songCard} onPress={onPress} activeOpacity={0.88}>
+const SongRow = ({ item, onPress, isActive, isPlaying, index }) => (
+    <TouchableOpacity style={[s.songCard, isActive && s.songCardActive]} onPress={onPress} activeOpacity={0.88}>
+        <View style={s.songIndexWrap}>
+            {isActive ? (
+                <MaterialIcons name={isPlaying ? 'volume-up' : 'pause'} size={16} color="#66cc33" />
+            ) : (
+                <Text style={s.songIndex}>{index + 1}</Text>
+            )}
+        </View>
         {item.imagePath ? (
             <Image source={{ uri: `${FILE_BASE}${item.imagePath}` }} style={s.songImage} resizeMode="cover" />
         ) : (
@@ -35,7 +44,7 @@ const SongRow = ({ item, onPress }) => (
             </LinearGradient>
         )}
         <View style={s.songInfo}>
-            <Text style={s.songTitle} numberOfLines={1}>{item.title}</Text>
+            <Text style={[s.songTitle, isActive && s.songTitleActive]} numberOfLines={1}>{item.title}</Text>
             {item.description ? (
                 <Text style={s.songDesc} numberOfLines={1}>{item.description}</Text>
             ) : null}
@@ -47,7 +56,11 @@ const SongRow = ({ item, onPress }) => (
                 <Text style={s.songMetaText}>{formatCount(item.listens)}</Text>
             </View>
         </View>
-        <MaterialIcons name="play-circle-filled" size={30} color="rgba(102,204,51,0.75)" />
+        <MaterialIcons
+            name={isActive && isPlaying ? 'pause-circle-filled' : 'play-circle-filled'}
+            size={30}
+            color={isActive ? '#66cc33' : 'rgba(102,204,51,0.75)'}
+        />
     </TouchableOpacity>
 );
 
@@ -59,6 +72,16 @@ const PlaylistDetailScreen = () => {
     const [playlist, setPlaylist] = useState(null);
     const [loading, setLoading] = useState(true);
     const [likeBusy, setLikeBusy] = useState(false);
+    const [playBusy, setPlayBusy] = useState(false);
+
+    const accessToken = useSelector((state) => state.auth?.accessToken);
+    const authHeaders = accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined;
+
+    const playbackState = usePlaybackState();
+    const isPlaying = playbackState?.state === State.Playing;
+    // Reactive — covers both the row highlight updating as the queue auto-advances, and
+    // reflecting playback already in progress if the user returns to this screen mid-queue.
+    const activeTrackId = useActiveTrack()?.id ?? null;
 
     const load = useCallback(async () => {
         setLoading(true);
@@ -73,6 +96,62 @@ const PlaylistDetailScreen = () => {
     }, [playlistId]);
 
     useFocusEffect(useCallback(() => { load(); }, [load]));
+
+    // Builds the play queue from this playlist's songs, in order, skipping any without
+    // audio (shouldn't normally happen, but never queue a track with nothing to stream).
+    const buildQueueTracks = (list) =>
+        (list ?? [])
+            .filter((song) => !!song.audioPath)
+            .map((song) => ({
+                id: song.id,
+                url: `${API_BASE_URL}/songs/${song.id}/stream`,
+                headers: authHeaders,
+                title: song.title ?? 'Unknown',
+                artist: 'StrataSound Music AI',
+                artwork: song.imagePath ? `${FILE_BASE}${song.imagePath}` : undefined,
+            }));
+
+    // Tapping a song plays the WHOLE playlist starting from it — once that song ends,
+    // TrackPlayer's own queue advances to the next one automatically, all the way through.
+    const playQueueFrom = async (songId) => {
+        const tracks = buildQueueTracks(playlist?.songs);
+        const startIdx = tracks.findIndex((t) => t.id === songId);
+        if (startIdx === -1) return; // this particular song has no audio to play
+
+        // Already the active track — tapping it again is just a pause/resume, not a restart.
+        if (activeTrackId === songId) {
+            await (isPlaying ? TrackPlayer.pause() : TrackPlayer.play());
+            return;
+        }
+
+        setPlayBusy(true);
+        try {
+            await TrackPlayer.reset();
+            await TrackPlayer.add(tracks);
+            await TrackPlayer.setRepeatMode(RepeatMode.Off);
+            if (startIdx > 0) await TrackPlayer.skip(startIdx);
+            await TrackPlayer.play();
+            // activeTrackId updates on its own via useActiveTrack() once
+            // Event.PlaybackActiveTrackChanged fires — no manual state to set here.
+        } catch (e) {
+            console.error('[PlaylistDetail] play error:', e);
+        } finally {
+            setPlayBusy(false);
+        }
+    };
+
+    // Acts as the big play/pause toggle for "this playlist" as a whole: if something from
+    // it is already loaded (anywhere in the queue, not just the first song), toggle
+    // play/pause in place rather than restarting from song 1 every tap.
+    const handlePlayAll = async () => {
+        const tracks = buildQueueTracks(playlist?.songs);
+        if (!tracks.length) return;
+        if (activeTrackId && tracks.some((t) => t.id === activeTrackId)) {
+            await (isPlaying ? TrackPlayer.pause() : TrackPlayer.play());
+            return;
+        }
+        playQueueFrom(tracks[0].id);
+    };
 
     const handleLike = async () => {
         if (!playlist || likeBusy) return;
@@ -101,6 +180,9 @@ const PlaylistDetailScreen = () => {
     const ownerName = playlist?.user
         ? `${playlist.user.firstName ?? ''} ${playlist.user.lastName ?? ''}`.trim()
         : null;
+    const hasPlayableSongs = songs.some((song) => !!song.audioPath);
+    const isThisPlaylistActive = !!activeTrackId && songs.some((song) => song.id === activeTrackId);
+    const isThisPlaylistPlaying = isThisPlaylistActive && isPlaying;
 
     return (
         <ImageBackground
@@ -163,21 +245,52 @@ const PlaylistDetailScreen = () => {
                                 <Text style={s.metaText}>{songs.length} {songs.length === 1 ? 'song' : 'songs'}</Text>
                             </View>
 
-                            <TouchableOpacity
-                                style={s.likeBtn}
-                                onPress={handleLike}
-                                activeOpacity={0.85}
-                                disabled={likeBusy}
-                            >
-                                <MaterialIcons
-                                    name={playlist.liked ? 'favorite' : 'favorite-border'}
-                                    size={18}
-                                    color={playlist.liked ? '#ff4d6d' : '#fff'}
-                                />
-                                <Text style={[s.likeBtnText, playlist.liked && s.likeBtnTextActive]}>
-                                    {formatCount(playlist.likes)} {playlist.likes === 1 ? 'Like' : 'Likes'}
-                                </Text>
-                            </TouchableOpacity>
+                            <View style={s.actionsRow}>
+                                {hasPlayableSongs && (
+                                    <TouchableOpacity
+                                        onPress={handlePlayAll}
+                                        activeOpacity={0.85}
+                                        disabled={playBusy}
+                                    >
+                                        <LinearGradient
+                                            colors={playBusy ? ['#555', '#444'] : ['#66cc33', '#047ec9']}
+                                            start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                                            style={s.playAllBtn}
+                                        >
+                                            <View style={s.playAllContent}>
+                                                {playBusy ? (
+                                                    <ActivityIndicator size="small" color="#fff" />
+                                                ) : (
+                                                    <MaterialIcons
+                                                        name={isThisPlaylistPlaying ? 'pause' : 'play-arrow'}
+                                                        size={18}
+                                                        color="#fff"
+                                                    />
+                                                )}
+                                                <Text style={s.playAllText}>
+                                                    {isThisPlaylistPlaying ? 'Playing' : 'Play All'}
+                                                </Text>
+                                            </View>
+                                        </LinearGradient>
+                                    </TouchableOpacity>
+                                )}
+
+                                <TouchableOpacity
+                                    style={s.likeBtn}
+                                    onPress={handleLike}
+                                    activeOpacity={0.85}
+                                    disabled={likeBusy}
+                                >
+                                    <MaterialIcons
+                                        name={playlist.liked ? 'favorite' : 'favorite-border'}
+                                        size={18}
+                                        color={playlist.liked ? '#ff4d6d' : '#fff'}
+                                    />
+                                    <Text style={[s.likeBtnText, playlist.liked && s.likeBtnTextActive]}>
+                                        {formatCount(playlist.likes)} {playlist.likes === 1 ? 'Like' : 'Likes'}
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
 
                             <View style={s.sectionRow}>
                                 <LinearGradient
@@ -189,10 +302,13 @@ const PlaylistDetailScreen = () => {
                             </View>
                         </View>
                     }
-                    renderItem={({ item }) => (
+                    renderItem={({ item, index }) => (
                         <SongRow
                             item={item}
-                            onPress={() => navigation.navigate('SongDetailScreen', { song: item })}
+                            index={index}
+                            isActive={item.id === activeTrackId}
+                            isPlaying={isPlaying}
+                            onPress={() => playQueueFrom(item.id)}
                         />
                     )}
                     ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
@@ -276,10 +392,36 @@ const s = StyleSheet.create({
         backgroundColor: 'rgba(255,255,255,0.3)',
         marginHorizontal: 8,
     },
+    actionsRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+        marginBottom: 24,
+    },
+    playAllBtn: {
+        borderRadius: 12,
+        shadowColor: '#66cc33',
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 5,
+    },
+    playAllContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        paddingHorizontal: 18,
+        paddingVertical: 10,
+    },
+    playAllText: {
+        color: '#fff',
+        fontSize: 13,
+        fontFamily: 'Oswald-Bold',
+        letterSpacing: 0.3,
+    },
     likeBtn: {
         flexDirection: 'row',
         alignItems: 'center',
-        alignSelf: 'flex-start',
         gap: 8,
         backgroundColor: 'rgba(255,255,255,0.1)',
         borderWidth: 1,
@@ -287,7 +429,6 @@ const s = StyleSheet.create({
         borderRadius: 12,
         paddingHorizontal: 16,
         paddingVertical: 10,
-        marginBottom: 24,
     },
     likeBtnText: {
         color: '#fff',
@@ -322,9 +463,16 @@ const s = StyleSheet.create({
         padding: 10,
         gap: 12,
     },
+    songCardActive: {
+        backgroundColor: 'rgba(102,204,51,0.1)',
+        borderColor: 'rgba(102,204,51,0.4)',
+    },
+    songIndexWrap: { width: 18, alignItems: 'center' },
+    songIndex: { color: 'rgba(255,255,255,0.35)', fontFamily: 'Oswald-Regular', fontSize: 12 },
     songImage: { width: 56, height: 56, borderRadius: 10 },
     songInfo: { flex: 1, gap: 3 },
     songTitle: { color: '#fff', fontFamily: 'Oswald-Bold', fontSize: 14, letterSpacing: 0.2 },
+    songTitleActive: { color: '#66cc33' },
     songDesc: { color: 'rgba(255,255,255,0.4)', fontFamily: 'Oswald-Regular', fontSize: 11 },
     songMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
     songMetaText: { color: 'rgba(255,255,255,0.45)', fontFamily: 'Oswald-Regular', fontSize: 11 },
