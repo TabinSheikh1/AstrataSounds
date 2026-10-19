@@ -6,23 +6,24 @@ import {
     FlatList,
     Image,
     TouchableOpacity,
-    Dimensions,
     Animated,
     ActivityIndicator,
     StatusBar,
-    ImageBackground
+    ImageBackground,
+    TextInput,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Header from './Header';
 import { getAllSongs, toggleLikeSong } from '../api/songsService';
-import { getMyPlaylists } from '../api/playlistsService';
+import { getAllPlaylists } from '../api/playlistsService';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
-const { width } = Dimensions.get('window');
+const SEARCH_DEBOUNCE_MS = 400;
+
 import { SERVER_URL as FILE_BASE } from '../config/api';
 const MAIN_TABS = ['Songs', 'Playlists'];
-const TAB_W = (width - 48) / 2;
+const TAB_ICONS = { Songs: 'music-note', Playlists: 'library-music' };
 
 const formatCount = (n) => {
     if (!n) return '0';
@@ -84,31 +85,53 @@ const SongCard = ({ item, likeData, onPress, onLike }) => (
 );
 
 // ── Playlist card ──────────────────────────────────────────────
-const PlaylistCard = ({ item }) => {
+// Row layout — matches SongCard so both tabs read as one consistent design instead of a
+// row list next to an unrelated grid.
+const PlaylistCard = ({ item, onPress }) => {
     const count = item.songs?.length ?? 0;
+    const creator = item.user?.firstName
+        ? `${item.user.firstName}${item.user.lastName ? ` ${item.user.lastName}` : ''}`
+        : null;
+
     return (
-        <TouchableOpacity style={s.playlistCard} activeOpacity={0.88}>
-            {item.bannerImage ? (
-                <Image key={item.bannerImage} source={{ uri: `${FILE_BASE}${item.bannerImage}` }} style={s.playlistCover} resizeMode="cover" />
-            ) : (
-                <LinearGradient
-                    colors={['#0d1b2a', '#16213e', '#0f3460']}
-                    style={[s.playlistCover, s.noImageWrap]}
-                >
-                    <MaterialIcons name="library-music" size={32} color="rgba(4,126,201,0.5)" />
-                </LinearGradient>
-            )}
-            <View style={s.playlistCountBadge}>
-                <MaterialIcons name="music-note" size={9} color="#fff" />
-                <Text style={s.playlistCountText}>{count}</Text>
+        <TouchableOpacity style={s.playlistCard} activeOpacity={0.88} onPress={onPress}>
+            <View style={s.playlistThumbWrap}>
+                {item.bannerImage ? (
+                    <Image key={item.bannerImage} source={{ uri: `${FILE_BASE}${item.bannerImage}` }} style={s.playlistCover} resizeMode="cover" />
+                ) : (
+                    <LinearGradient
+                        colors={['#0d1b2a', '#16213e', '#0f3460']}
+                        style={[s.playlistCover, s.noImageWrap]}
+                    >
+                        <MaterialIcons name="library-music" size={28} color="rgba(4,126,201,0.5)" />
+                    </LinearGradient>
+                )}
+                <View style={s.playlistPlayBadge}>
+                    <MaterialIcons name="playlist-play" size={16} color="#fff" />
+                </View>
             </View>
-            <LinearGradient
-                colors={['transparent', 'rgba(0,0,0,0.92)']}
-                style={s.playlistOverlay}
-            >
+
+            <View style={s.playlistInfo}>
                 <Text style={s.playlistName} numberOfLines={1}>{item.name}</Text>
-                <Text style={s.playlistSongCount}>{count} {count === 1 ? 'song' : 'songs'}</Text>
-            </LinearGradient>
+                {creator ? (
+                    <Text style={s.playlistCreator} numberOfLines={1}>by {creator}</Text>
+                ) : null}
+
+                <View style={s.playlistMetaRow}>
+                    <View style={s.actionChip}>
+                        <MaterialIcons name="music-note" size={13} color="rgba(255,255,255,0.6)" />
+                        <Text style={s.actionText}>{count} {count === 1 ? 'song' : 'songs'}</Text>
+                    </View>
+                    {item.likes > 0 && (
+                        <View style={s.actionChip}>
+                            <MaterialIcons name="favorite" size={12} color="rgba(255,255,255,0.6)" />
+                            <Text style={s.actionText}>{formatCount(item.likes)}</Text>
+                        </View>
+                    )}
+                </View>
+            </View>
+
+            <MaterialIcons name="chevron-right" size={22} color="rgba(255,255,255,0.3)" />
         </TouchableOpacity>
     );
 };
@@ -130,11 +153,48 @@ const Empty = ({ icon, message }) => (
     </View>
 );
 
+// ── Search bar ─────────────────────────────────────────────────
+// Backend-driven: every keystroke (debounced) hits GET /songs or /playlists with
+// ?search=, never a client-side filter over an already-fetched list.
+const SearchBar = ({ value, onChangeText, onClear, placeholder, searching, focused, onFocus, onBlur }) => (
+    <View style={[s.searchWrap, focused && s.searchWrapFocused]}>
+        <MaterialIcons name="search" size={19} color={focused ? '#66cc33' : 'rgba(255,255,255,0.4)'} />
+        <TextInput
+            value={value}
+            onChangeText={onChangeText}
+            onFocus={onFocus}
+            onBlur={onBlur}
+            placeholder={placeholder}
+            placeholderTextColor="rgba(255,255,255,0.35)"
+            style={s.searchInput}
+            returnKeyType="search"
+            autoCorrect={false}
+            autoCapitalize="none"
+        />
+        {searching ? (
+            <ActivityIndicator size="small" color="#66cc33" />
+        ) : value.length > 0 ? (
+            <TouchableOpacity onPress={onClear} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <View style={s.searchClearBtn}>
+                    <MaterialIcons name="close" size={13} color="#0d1117" />
+                </View>
+            </TouchableOpacity>
+        ) : null}
+    </View>
+);
+
 // ── Main screen ────────────────────────────────────────────────
 const HomeSongsScreen = () => {
     const [selectedTab, setSelectedTab] = useState('Songs');
     const navigation = useNavigation();
     const tabIndicator = useRef(new Animated.Value(0)).current;
+    // Measured from the actual rendered container rather than hand-calculated from screen
+    // width minus guessed padding — a fixed formula here previously drifted from the real
+    // padding stack (tabsWrapper's horizontal padding + tabsContainer's own padding) and
+    // left a gap on the right edge of the pill when "Playlists" was active.
+    const [tabContainerWidth, setTabContainerWidth] = useState(0);
+    const TAB_PADDING = 2; // tabsContainer's `padding` — pill insets by this on each side
+    const tabW = tabContainerWidth > 0 ? (tabContainerWidth - TAB_PADDING * 2) / 2 : 0;
 
     const [songs, setSongs] = useState([]);
     const [songsLoading, setSongsLoading] = useState(false);
@@ -142,27 +202,65 @@ const HomeSongsScreen = () => {
     const [playlistsLoading, setPlaylistsLoading] = useState(false);
     const [likeState, setLikeState] = useState({});
 
-    const handleTabPress = (tab, index) => {
-        setSelectedTab(tab);
-        Animated.spring(tabIndicator, { toValue: index, tension: 60, friction: 8, useNativeDriver: true }).start();
-    };
+    // One search box, scoped to whichever tab is active — searches that tab's content
+    // through the backend (GET /songs or /playlists with ?search=), never a filter over
+    // an already-fetched list.
+    const [searchQuery, setSearchQuery] = useState('');
+    const [searchFocused, setSearchFocused] = useState(false);
+    const searchDebounceRef = useRef(null);
+    // The initial load already happens via useFocusEffect below — without this guard the
+    // debounce effect would *also* fire once on mount (searchQuery starts at '') and
+    // double-fetch.
+    const skipNextDebounceRef = useRef(true);
+    // useFocusEffect's callback must stay referentially stable ([] deps) — React Navigation
+    // re-invokes it immediately on any reference change *while already focused*, not just on
+    // a real focus/blur, so putting selectedTab/searchQuery in its deps would fire a request
+    // on every keystroke/tab-tap and blow past the debounce above. Tracking the latest values
+    // in a ref instead keeps the callback stable while still reading current state when an
+    // actual refocus happens.
+    const latestRef = useRef({ selectedTab: 'Songs', searchQuery: '' });
 
-    const loadSongs = async () => {
+    const loadSongs = async (search) => {
         setSongsLoading(true);
         try {
-            const data = await getAllSongs();
+            const data = await getAllSongs(search);
             const list = Array.isArray(data) ? data : data?.data ?? [];
             setSongs(list);
             const seed = {};
             list.forEach((item) => {
                 seed[item.id] = { liked: item.isLiked ?? false, count: item.likesCount ?? 0 };
             });
-            setLikeState(seed);
+            setLikeState((prev) => ({ ...prev, ...seed }));
         } catch (e) {
             console.error('[HomeSongs] load songs error:', e?.message);
         } finally {
             setSongsLoading(false);
         }
+    };
+
+    const loadPlaylists = async (search) => {
+        setPlaylistsLoading(true);
+        try {
+            const data = await getAllPlaylists(search);
+            setPlaylists(Array.isArray(data) ? data : data?.data ?? []);
+        } catch (e) {
+            console.error('[HomeSongs] load playlists error:', e?.message);
+        } finally {
+            setPlaylistsLoading(false);
+        }
+    };
+
+    const runSearch = (tab, search) => {
+        if (tab === 'Songs') loadSongs(search);
+        else loadPlaylists(search);
+    };
+
+    const handleTabPress = (tab, index) => {
+        setSelectedTab(tab);
+        Animated.spring(tabIndicator, { toValue: index, tension: 60, friction: 8, useNativeDriver: true }).start();
+        // Instant, no debounce — a tap isn't rapid typing, and the other tab's data for
+        // the current query (if any) hasn't been fetched yet.
+        runSearch(tab, searchQuery.trim() || undefined);
     };
 
     const handleLike = async (song) => {
@@ -178,28 +276,54 @@ const HomeSongsScreen = () => {
         }
     };
 
-    const loadPlaylists = async () => {
-        setPlaylistsLoading(true);
-        try {
-            const data = await getMyPlaylists();
-            setPlaylists(Array.isArray(data) ? data : data?.data ?? []);
-        } catch (e) {
-            console.error('[HomeSongs] load playlists error:', e?.message);
-        } finally {
-            setPlaylistsLoading(false);
-        }
-    };
-
-    useFocusEffect(useCallback(() => { loadSongs(); }, []));
-
+    // Keep latestRef current every render so the stable useFocusEffect callback below
+    // never reads stale state.
     useEffect(() => {
-        if (selectedTab === 'Playlists') loadPlaylists();
-    }, [selectedTab]);
+        latestRef.current = { selectedTab, searchQuery };
+    });
+
+    // Debounced search-as-you-type against whichever tab is currently active.
+    useEffect(() => {
+        if (skipNextDebounceRef.current) {
+            skipNextDebounceRef.current = false;
+            return undefined;
+        }
+        clearTimeout(searchDebounceRef.current);
+        searchDebounceRef.current = setTimeout(() => {
+            runSearch(selectedTab, searchQuery.trim() || undefined);
+        }, SEARCH_DEBOUNCE_MS);
+        return () => clearTimeout(searchDebounceRef.current);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [searchQuery]);
+
+    // Refresh the active tab (respecting any in-progress search) whenever the screen
+    // regains focus, instead of unconditionally reloading the unfiltered list and
+    // silently dropping the user's search. Reads latestRef rather than closing over
+    // selectedTab/searchQuery directly — see latestRef's declaration for why.
+    useFocusEffect(
+        useCallback(() => {
+            const { selectedTab: tab, searchQuery: query } = latestRef.current;
+            runSearch(tab, query.trim() || undefined);
+            // eslint-disable-next-line react-hooks/exhaustive-deps
+        }, []),
+    );
+
+    const handleClearSearch = () => setSearchQuery('');
+
+    const trimmedQuery = searchQuery.trim();
+    const isSearching = trimmedQuery.length > 0;
 
     const renderContent = () => {
         if (selectedTab === 'Songs') {
-            if (songsLoading) return <Loader />;
-            if (!songs.length) return <Empty icon="music-note" message="No songs found yet." />;
+            // Only the very first load (nothing on screen yet) gets the full-screen loader —
+            // once there are results, a new search just updates the inline spinner in the
+            // search bar so the list doesn't blank out on every keystroke.
+            if (songsLoading && !songs.length) return <Loader />;
+            if (!songs.length) {
+                return isSearching
+                    ? <Empty icon="search-off" message={`No songs match "${trimmedQuery}".`} />
+                    : <Empty icon="music-note" message="No songs found yet." />;
+            }
             return (
                 <FlatList
                     key="songs"
@@ -220,16 +344,24 @@ const HomeSongsScreen = () => {
         }
 
         if (selectedTab === 'Playlists') {
-            if (playlistsLoading) return <Loader />;
-            if (!playlists.length) return <Empty icon="library-music" message="No playlists yet. Create one in Library." />;
+            if (playlistsLoading && !playlists.length) return <Loader />;
+            if (!playlists.length) {
+                return isSearching
+                    ? <Empty icon="search-off" message={`No playlists match "${trimmedQuery}".`} />
+                    : <Empty icon="library-music" message="No playlists yet. Create one in Library." />;
+            }
             return (
                 <FlatList
                     key="playlists"
                     data={playlists}
-                    renderItem={({ item }) => <PlaylistCard item={item} />}
+                    renderItem={({ item }) => (
+                        <PlaylistCard
+                            item={item}
+                            onPress={() => navigation.navigate('PlaylistDetailScreen', { playlistId: item.id })}
+                        />
+                    )}
                     keyExtractor={(item) => String(item.id)}
-                    numColumns={2}
-                    contentContainerStyle={s.gridList}
+                    contentContainerStyle={s.songList}
                     showsVerticalScrollIndicator={false}
                 />
             );
@@ -259,34 +391,67 @@ const HomeSongsScreen = () => {
 
                 {/* ── Tabs ── */}
                 <View style={s.tabsWrapper}>
-                    <View style={s.tabsContainer}>
+                    <View
+                        style={s.tabsContainer}
+                        onLayout={(e) => setTabContainerWidth(e.nativeEvent.layout.width)}
+                    >
                         <Animated.View
                             style={[
                                 s.tabPill,
                                 {
-                                    width: TAB_W,
+                                    width: tabW,
+                                    opacity: tabW > 0 ? 1 : 0,
                                     transform: [{
                                         translateX: tabIndicator.interpolate({
                                             inputRange: [0, 1],
-                                            outputRange: [2, TAB_W + 2],
+                                            outputRange: [TAB_PADDING, tabW + TAB_PADDING],
                                         }),
                                     }],
                                 },
                             ]}
-                        />
-                        {MAIN_TABS.map((tab, i) => (
-                            <TouchableOpacity
-                                key={tab}
-                                style={s.tabItem}
-                                onPress={() => handleTabPress(tab, i)}
-                                activeOpacity={0.8}
-                            >
-                                <Text style={[s.tabText, selectedTab === tab && s.tabTextActive]}>
-                                    {tab}
-                                </Text>
-                            </TouchableOpacity>
-                        ))}
+                        >
+                            <LinearGradient
+                                colors={['#66cc33', '#047ec9']}
+                                start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                                style={s.tabPillGradient}
+                            />
+                        </Animated.View>
+                        {MAIN_TABS.map((tab, i) => {
+                            const active = selectedTab === tab;
+                            return (
+                                <TouchableOpacity
+                                    key={tab}
+                                    style={s.tabItem}
+                                    onPress={() => handleTabPress(tab, i)}
+                                    activeOpacity={0.8}
+                                >
+                                    <MaterialIcons
+                                        name={TAB_ICONS[tab]}
+                                        size={15}
+                                        color={active ? '#fff' : 'rgba(255,255,255,0.55)'}
+                                        style={s.tabIcon}
+                                    />
+                                    <Text style={[s.tabText, active && s.tabTextActive]}>
+                                        {tab}
+                                    </Text>
+                                </TouchableOpacity>
+                            );
+                        })}
                     </View>
+                </View>
+
+                {/* ── Search ── */}
+                <View style={s.searchOuter}>
+                    <SearchBar
+                        value={searchQuery}
+                        onChangeText={setSearchQuery}
+                        onClear={handleClearSearch}
+                        placeholder={selectedTab === 'Songs' ? 'Search songs...' : 'Search playlists...'}
+                        searching={selectedTab === 'Songs' ? songsLoading : playlistsLoading}
+                        focused={searchFocused}
+                        onFocus={() => setSearchFocused(true)}
+                        onBlur={() => setSearchFocused(false)}
+                    />
                 </View>
 
                 {renderContent()}
@@ -339,22 +504,66 @@ const s = StyleSheet.create({
         position: 'absolute',
         top: 2,
         bottom: 2,
-        backgroundColor: '#fff',
         borderRadius: 28,
-        shadowColor: '#000',
+        overflow: 'hidden',
+        shadowColor: '#047ec9',
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.18,
-        shadowRadius: 6,
-        elevation: 4,
+        shadowOpacity: 0.35,
+        shadowRadius: 8,
+        elevation: 5,
     },
-    tabItem: { flex: 1, alignItems: 'center', paddingVertical: 9, zIndex: 1 },
+    tabPillGradient: { flex: 1 },
+    tabItem: {
+        flex: 1,
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        gap: 6,
+        paddingVertical: 9,
+        zIndex: 1,
+    },
+    tabIcon: { marginTop: -1 },
     tabText: {
         fontSize: 13,
         fontFamily: 'Oswald-Bold',
         color: 'rgba(255,255,255,0.6)',
         letterSpacing: 0.5,
     },
-    tabTextActive: { color: '#0d1117' },
+    tabTextActive: { color: '#fff' },
+
+    // ── Search ─────────────────────────────────────────────────
+    searchOuter: { paddingHorizontal: 16, paddingBottom: 10 },
+    searchWrap: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+        backgroundColor: 'rgba(255,255,255,0.08)',
+        borderRadius: 14,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.14)',
+        paddingHorizontal: 14,
+        height: 46,
+    },
+    searchWrapFocused: {
+        borderColor: 'rgba(102,204,51,0.5)',
+        backgroundColor: 'rgba(102,204,51,0.07)',
+    },
+    searchInput: {
+        flex: 1,
+        color: '#fff',
+        fontSize: 14,
+        fontFamily: 'Oswald-Regular',
+        padding: 0,
+        height: '100%',
+    },
+    searchClearBtn: {
+        width: 18,
+        height: 18,
+        borderRadius: 9,
+        backgroundColor: 'rgba(255,255,255,0.7)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
 
     // ── Song list ──────────────────────────────────────────────
     songList: {
@@ -448,68 +657,59 @@ const s = StyleSheet.create({
         marginLeft: 'auto',
     },
 
-    // ── Grid (playlists + genres) ──────────────────────────────
-    gridList: {
-        paddingHorizontal: 12,
-        paddingTop: 6,
-        paddingBottom: 110,
-    },
-
-    // ── Playlist card ──────────────────────────────────────────
+    // ── Playlist card (row — mirrors the song card above) ───────
     playlistCard: {
-        flex: 1,
-        margin: 6,
-        height: 170,
-        borderRadius: 16,
-        overflow: 'hidden',
-        backgroundColor: 'rgba(255,255,255,0.08)',
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.14)',
-    },
-    playlistCover: {
-        width: '100%',
-        height: '100%',
-        position: 'absolute',
-    },
-    playlistCountBadge: {
-        position: 'absolute',
-        top: 10,
-        right: 10,
         flexDirection: 'row',
-        alignItems: 'center',
-        gap: 3,
-        backgroundColor: 'rgba(0,0,0,0.6)',
-        borderRadius: 8,
-        paddingHorizontal: 7,
-        paddingVertical: 3,
+        backgroundColor: 'rgba(255,255,255,0.1)',
+        borderRadius: 16,
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.15)',
+        padding: 12,
+        alignItems: 'center',
+        gap: 12,
     },
-    playlistCountText: {
-        color: '#fff',
-        fontSize: 10,
-        fontFamily: 'Oswald-Bold',
+    playlistThumbWrap: {
+        position: 'relative',
     },
-    playlistOverlay: {
+    playlistCover: {
+        width: 72,
+        height: 72,
+        borderRadius: 12,
+    },
+    playlistPlayBadge: {
         position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        paddingHorizontal: 12,
-        paddingBottom: 12,
-        paddingTop: 48,
+        bottom: -4,
+        right: -4,
+        width: 26,
+        height: 26,
+        borderRadius: 13,
+        backgroundColor: '#047ec9',
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 2,
+        borderColor: '#0d1117',
+    },
+    playlistInfo: {
+        flex: 1,
+        justifyContent: 'center',
+        gap: 4,
     },
     playlistName: {
         color: '#fff',
-        fontSize: 14,
+        fontSize: 15,
         fontFamily: 'Oswald-Bold',
         letterSpacing: 0.2,
-        marginBottom: 2,
     },
-    playlistSongCount: {
-        color: 'rgba(255,255,255,0.6)',
-        fontSize: 11,
+    playlistCreator: {
+        color: 'rgba(255,255,255,0.45)',
         fontFamily: 'Oswald-Regular',
+        fontSize: 11,
+    },
+    playlistMetaRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginTop: 4,
+        gap: 8,
     },
 
     // ── Loader / Empty ─────────────────────────────────────────
