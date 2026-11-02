@@ -15,18 +15,11 @@ import {
     ActivityIndicator,
     Keyboard,
     TouchableWithoutFeedback,
-    Modal,
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import GradientBackground from './GradientBackground';
 import InputField from './InputField';
 import { registerUser } from '../store/actions/authActions';
-
-const GENDER_OPTIONS = [
-  { label: 'Male', value: 'male' },
-  { label: 'Female', value: 'female' },
-  { label: 'Other', value: 'other' },
-];
 
 const SignUpScreen = ({ navigation }) => {
     const dispatch = useDispatch();
@@ -35,9 +28,6 @@ const SignUpScreen = ({ navigation }) => {
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
     const [email, setEmail] = useState('');
-    const [age, setAge] = useState('');
-    const [gender, setGender] = useState('');
-    const [isGenderModalVisible, setGenderModal] = useState(false);
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
@@ -102,14 +92,6 @@ const SignUpScreen = ({ navigation }) => {
             Alert.alert('Validation Error', 'Email is required');
             return false;
         }
-        if (!age.trim() || isNaN(parseInt(age, 10)) || parseInt(age, 10) < 1 || parseInt(age, 10) > 120) {
-            Alert.alert('Validation Error', 'Please enter a valid age (1-120)');
-            return false;
-        }
-        if (!gender) {
-            Alert.alert('Validation Error', 'Please select a gender');
-            return false;
-        }
         if (!password.trim()) {
             Alert.alert('Validation Error', 'Password is required');
             return false;
@@ -135,8 +117,6 @@ const SignUpScreen = ({ navigation }) => {
                 lastName: lastName.trim(),
                 email: email.trim().toLowerCase(),
                 password,
-                age: parseInt(age, 10),
-                gender,
             })
         );
 
@@ -148,11 +128,6 @@ const SignUpScreen = ({ navigation }) => {
         } else {
             Alert.alert('Sign Up Failed', result.message);
         }
-    };
-
-    const handleGenderSelect = (option) => {
-        setGender(option.value);
-        setGenderModal(false);
     };
 
     return (
@@ -214,21 +189,6 @@ const SignUpScreen = ({ navigation }) => {
                             keyboardType="email-address"
                         />
                         <InputField
-                            placeholder="Age"
-                            value={age}
-                            onChangeText={setAge}
-                            iconName="cake"
-                            keyboardType="number-pad"
-                        />
-                        <InputField
-                            placeholder={gender ? GENDER_OPTIONS.find(o => o.value === gender)?.label : 'Gender'}
-                            value={gender ? GENDER_OPTIONS.find(o => o.value === gender)?.label : ''}
-                            iconName="wc"
-                            editable={false}
-                            rightIcon="keyboard-arrow-down"
-                            onPress={() => setGenderModal(true)}
-                        />
-                        <InputField
                             placeholder="Password"
                             value={password}
                             onChangeText={setPassword}
@@ -282,37 +242,6 @@ const SignUpScreen = ({ navigation }) => {
                 </TouchableWithoutFeedback>
             </KeyboardAvoidingView>
 
-            {/* Gender Picker Modal — a real native Modal (not a plain absolutely-positioned
-                View) so it renders in its own layer and reliably receives taps on physical
-                Android devices, where a bare View can lose the touch/elevation stacking
-                order to sibling components like KeyboardAvoidingView/ScrollView. */}
-            <Modal
-                visible={isGenderModalVisible}
-                transparent
-                animationType="slide"
-                onRequestClose={() => setGenderModal(false)}
-            >
-                <View style={styles.modalOverlay}>
-                    <View style={styles.modalSheet}>
-                        <Text style={styles.modalTitle}>Select Gender</Text>
-                        {GENDER_OPTIONS.map(option => (
-                            <TouchableOpacity
-                                key={option.value}
-                                style={styles.modalOption}
-                                onPress={() => handleGenderSelect(option)}
-                            >
-                                <Text style={styles.modalOptionText}>{option.label}</Text>
-                            </TouchableOpacity>
-                        ))}
-                        <TouchableOpacity
-                            style={styles.modalCancel}
-                            onPress={() => setGenderModal(false)}
-                        >
-                            <Text style={styles.modalCancelText}>Cancel</Text>
-                        </TouchableOpacity>
-                    </View>
-                </View>
-            </Modal>
         </GradientBackground>
     );
 };
@@ -408,53 +337,5 @@ const styles = StyleSheet.create({
         height: 80,
         width: 280,
         opacity: 0.4,
-    },
-
-    // Gender modal
-    modalOverlay: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: 'rgba(0,0,0,0.55)',
-        justifyContent: 'flex-end',
-    },
-    modalSheet: {
-        backgroundColor: '#1a1a2e',
-        borderTopLeftRadius: 20,
-        borderTopRightRadius: 20,
-        paddingHorizontal: 24,
-        paddingTop: 20,
-        paddingBottom: 40,
-    },
-    modalTitle: {
-        color: '#fff',
-        fontFamily: 'Oswald-Bold',
-        fontSize: 18,
-        letterSpacing: 1,
-        marginBottom: 16,
-        textAlign: 'center',
-    },
-    modalOption: {
-        paddingVertical: 14,
-        borderBottomWidth: 1,
-        borderBottomColor: 'rgba(255,255,255,0.1)',
-    },
-    modalOptionText: {
-        color: '#fff',
-        fontFamily: 'Oswald-Regular',
-        fontSize: 16,
-        textAlign: 'center',
-    },
-    modalCancel: {
-        marginTop: 16,
-        paddingVertical: 12,
-        alignItems: 'center',
-    },
-    modalCancelText: {
-        color: 'rgba(255,255,255,0.5)',
-        fontFamily: 'Oswald-Regular',
-        fontSize: 15,
     },
 });
