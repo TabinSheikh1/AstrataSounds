@@ -9,7 +9,8 @@ import MenuScreen from './MenuScreen';
 const Header = () => {
     const navigation = useNavigation();
     const {
-        tokenBalance,
+        purchasedBalance,
+        totalBalance,
         tokenGranted,
         tokenColor,
         tokenPct,
@@ -17,6 +18,11 @@ const Header = () => {
         isBlocked,
         refreshAll,
     } = useSubscription();
+
+    // Colour/bar reflect everything the user can spend: purchased credits never expire, so
+    // they keep the badge healthy even when the monthly allowance is used up.
+    const balanceColor = totalBalance < 100 ? '#EF4444' : purchasedBalance > 0 ? '#66cc33' : tokenColor;
+    const barPct = purchasedBalance > 0 ? 1 : tokenPct;
 
     const [drawerVisible, setDrawerVisible] = useState(false);
     const [menuVisible, setMenuVisible] = useState(false);
@@ -95,16 +101,16 @@ const Header = () => {
                                 style={[
                                     styles.tokenBarFill,
                                     {
-                                        width: `${Math.min(tokenPct * 100, 100)}%`,
-                                        backgroundColor: tokenColor,
+                                        width: `${Math.min(barPct * 100, 100)}%`,
+                                        backgroundColor: balanceColor,
                                     },
                                 ]}
                             />
                         </View>
-                        <Text style={[styles.tokenText, { color: tokenColor }]}>
-                            {(tokenBalance / 100).toFixed(1).replace(/\.0$/, '')} cr
+                        <Text style={[styles.tokenText, { color: balanceColor }]}>
+                            {(totalBalance / 100).toFixed(1).replace(/\.0$/, '')} cr
                         </Text>
-                        <MaterialIcons name="bolt" size={13} color={tokenColor} />
+                        <MaterialIcons name="bolt" size={13} color={balanceColor} />
                     </View>
                 </TouchableOpacity>
             </View>

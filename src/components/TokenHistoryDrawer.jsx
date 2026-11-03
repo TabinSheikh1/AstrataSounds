@@ -72,7 +72,11 @@ const TransactionRow = ({ item }) => {
 const toCredits = (t) => (t / 100).toFixed(1).replace(/\.0$/, '');
 
 const TokenHistoryDrawer = ({ visible, onClose }) => {
-  const { tokenBalance, tokenGranted, tokenColor, tokenPct, tokens } = useSubscription();
+  const { tokenBalance, purchasedBalance, totalBalance, tokenGranted, tokenColor, tokenPct, tokens } = useSubscription();
+  // Colour/bar reflect everything the user can spend: purchased credits never expire, so
+  // they keep the badge healthy even when the monthly allowance is used up.
+  const balanceColor = totalBalance < 100 ? '#EF4444' : purchasedBalance > 0 ? '#66cc33' : tokenColor;
+  const barPct = purchasedBalance > 0 ? 1 : tokenPct;
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -146,10 +150,14 @@ const TokenHistoryDrawer = ({ visible, onClose }) => {
           <View style={styles.balanceRow}>
             <View>
               <Text style={styles.balanceLabel}>REMAINING</Text>
-              <Text style={[styles.balanceValue, { color: tokenColor }]}>
-                {toCredits(tokenBalance)}
+              <Text style={[styles.balanceValue, { color: balanceColor }]}>
+                {toCredits(totalBalance)}
               </Text>
-              <Text style={styles.balanceOf}>of {toCredits(tokenGranted)} credits this period</Text>
+              <Text style={styles.balanceOf}>
+                {purchasedBalance > 0
+                  ? `${toCredits(tokenBalance)} of ${toCredits(tokenGranted)} this period + ${toCredits(purchasedBalance)} purchased`
+                  : `of ${toCredits(tokenGranted)} credits this period`}
+              </Text>
             </View>
             <View style={styles.balanceRight}>
               <Text style={styles.costNote}>1 cr · full song</Text>
@@ -166,8 +174,8 @@ const TokenHistoryDrawer = ({ visible, onClose }) => {
               style={[
                 styles.barFill,
                 {
-                  width: `${Math.min(tokenPct * 100, 100)}%`,
-                  backgroundColor: tokenColor,
+                  width: `${Math.min(barPct * 100, 100)}%`,
+                  backgroundColor: balanceColor,
                 },
               ]}
             />
