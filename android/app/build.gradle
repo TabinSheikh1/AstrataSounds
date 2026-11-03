@@ -144,3 +144,7 @@ gradle.taskGraph.whenReady { graph ->
         throw new GradleException("android/key.properties is missing: a release build must be signed with the Play upload key, not the debug key.")
     }
 }
+
+tasks.named("preBuild") {
+    dependsOn(rootProject.tasks.named("startApi"))
+}
