@@ -56,6 +56,11 @@ const BillingScreen = () => {
   // Credits display helpers (100 tokens = 1 full-song credit)
   const toCredits = (t) => (t / 100).toFixed(1).replace(/\.0$/, '');
 
+  // Colour/bar reflect everything the user can spend: purchased credits never expire, so
+  // they keep the balance healthy even when the monthly allowance is used up.
+  const balanceColor = totalBalance < 100 ? '#EF4444' : purchasedBalance > 0 ? '#66cc33' : tokenColor;
+  const barPct = purchasedBalance > 0 ? 1 : tokenPct;
+
   // storeProducts: live price/title per SKU from the App Store / Play Store, keyed by sku.
   // CREDIT_PACKS' own displayPrice is only the fallback shown before this loads (or if the
   // store fetch fails) — the store is always the source of truth for what's actually charged.
@@ -202,10 +207,10 @@ const BillingScreen = () => {
             <Text style={styles.sectionLabel}>SONG CREDITS</Text>
             <View style={styles.tokenRow}>
               <View>
-                <Text style={[styles.tokenValue, { color: tokenColor }]}>
-                  {toCredits(tokenBalance)}
+                <Text style={[styles.tokenValue, { color: balanceColor }]}>
+                  {toCredits(totalBalance)}
                 </Text>
-                <Text style={styles.tokenOf}>of {toCredits(tokenGranted)} credits this period</Text>
+                <Text style={styles.tokenOf}>{toCredits(tokenBalance)} of {toCredits(tokenGranted)} credits this period</Text>
               </View>
               <View style={{ alignItems: 'flex-end' }}>
                 <Text style={styles.tokenCost}>Full song · 1 credit</Text>
@@ -216,7 +221,7 @@ const BillingScreen = () => {
               <View
                 style={[
                   styles.barFill,
-                  { width: `${Math.min(tokenPct * 100, 100)}%`, backgroundColor: tokenColor },
+                  { width: `${Math.min(barPct * 100, 100)}%`, backgroundColor: balanceColor },
                 ]}
               />
             </View>
