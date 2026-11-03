@@ -13,6 +13,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation } from '@react-navigation/native';
 import { getErrorMessage } from '../utils/errorHandler';
+import { ErrorCode } from 'react-native-iap';
 import { purchaseSubscription } from '../iap/iapService';
 import { getSubscriptionSku } from '../iap/products';
 
@@ -86,7 +87,11 @@ const CheckoutConfirmModal = ({
       await purchaseSubscription(sku);
       onClose();
     } catch (e) {
-      if (e?.code !== 'E_USER_CANCELLED') {
+      // Belt-and-suspenders: requestPurchase() itself only throws for dispatch failures
+      // (empty sku, not connected, etc) — an actual user cancel is event-based and handled
+      // in iapService.js's purchaseErrorListener instead. Still guard against it here with
+      // the correct code (see that listener for why 'E_USER_CANCELLED' never matched).
+      if (e?.code !== ErrorCode.UserCancelled) {
         Alert.alert('Purchase Failed', getErrorMessage(e, 'Something went wrong. Please try again.'));
       }
     } finally {

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
@@ -14,8 +14,11 @@ import {
 } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { useCallback } from 'react';
+import { ErrorCode } from 'react-native-iap';
 import { useSubscription } from '../hooks/useSubscription';
+import { getCreditPackProducts, purchaseConsumable } from '../iap/iapService';
+import { CREDIT_PACKS } from '../iap/products';
+import { getErrorMessage } from '../utils/errorHandler';
 
 const STATUS_CONFIG = {
   active: { label: 'Active', color: '#66cc33', bg: 'rgba(102,204,51,0.12)' },
@@ -53,12 +56,41 @@ const BillingScreen = () => {
   // Credits display helpers (100 tokens = 1 full-song credit)
   const toCredits = (t) => (t / 100).toFixed(1).replace(/\.0$/, '');
 
+  // storeProducts: live price/title per SKU from the App Store / Play Store, keyed by sku.
+  // CREDIT_PACKS' own displayPrice is only the fallback shown before this loads (or if the
+  // store fetch fails) — the store is always the source of truth for what's actually charged.
+  const [storeProducts, setStoreProducts] = useState({});
+  const [purchasingSku, setPurchasingSku] = useState(null);
 
   useFocusEffect(
     useCallback(() => {
       refreshAll();
+      getCreditPackProducts()
+        .then((products) => {
+          const bySku = {};
+          (products ?? []).forEach((p) => { bySku[p.id] = p; });
+          setStoreProducts(bySku);
+        })
+        .catch((e) => console.error('[Billing] Failed to load credit pack prices', e));
     }, []),
   );
+
+  const handleBuyCreditPack = async (sku) => {
+    if (purchasingSku) return; // one purchase sheet at a time
+    setPurchasingSku(sku);
+    try {
+      // Result (success/failure, token credit, the "Credits Added" alert) arrives async via
+      // the purchaseUpdatedListener in src/iap/iapService.js, same as subscriptions — this
+      // call only opens the native purchase sheet.
+      await purchaseConsumable(sku);
+    } catch (e) {
+      if (e?.code !== ErrorCode.UserCancelled) {
+        Alert.alert('Purchase Failed', getErrorMessage(e, 'Something went wrong. Please try again.'));
+      }
+    } finally {
+      setPurchasingSku(null);
+    }
+  };
 
   const plan = subscription?.plan;
   const status = subscription?.status ?? 'free';
@@ -193,6 +225,61 @@ const BillingScreen = () => {
                 Resets {fmtDate(tokens.periodEnd)}
               </Text>
             )}
+            {purchasedBalance > 0 && (
+              <View style={styles.purchasedRow}>
+                <MaterialIcons name="bolt" size={13} color="#FBBF24" />
+                <Text style={styles.purchasedText}>
+                  +{toCredits(purchasedBalance)} purchased credits · never expire
+                </Text>
+              </View>
+            )}
+          </View>
+
+          {/* Buy more credits — one-time packs, on top of whatever the plan grants monthly */}
+          <View style={styles.sectionCard}>
+            <Text style={styles.sectionLabel}>NEED MORE RIGHT NOW?</Text>
+            <View style={styles.packsRow}>
+              {CREDIT_PACKS.map((pack) => {
+                const storeProduct = storeProducts[pack.sku];
+                const price = storeProduct?.displayPrice ?? pack.displayPrice;
+                const isBuying = purchasingSku === pack.sku;
+                const isBestValue = pack === CREDIT_PACKS[CREDIT_PACKS.length - 1];
+                return (
+                  <TouchableOpacity
+                    key={pack.sku}
+                    style={styles.packCard}
+                    onPress={() => handleBuyCreditPack(pack.sku)}
+                    activeOpacity={0.85}
+                    disabled={!!purchasingSku}
+                  >
+                    {isBestValue && (
+                      <View style={styles.bestValueTag}>
+                        <Text style={styles.bestValueTagText}>BEST VALUE</Text>
+                      </View>
+                    )}
+                    <Text style={styles.packName}>{pack.name}</Text>
+                    <Text style={styles.packSongs}>{pack.songs} songs</Text>
+                    <View style={styles.packPriceRow}>
+                      {isBuying ? (
+                        <ActivityIndicator size="small" color="#66cc33" />
+                      ) : (
+                        <Text style={styles.packPrice}>{price}</Text>
+                      )}
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+            <TouchableOpacity
+              style={styles.subscribeNudge}
+              onPress={() => navigation.navigate('PricingScreen')}
+              activeOpacity={0.7}
+            >
+              <MaterialIcons name="auto-awesome" size={13} color="#66cc33" />
+              <Text style={styles.subscribeNudgeText}>
+                Subscribing gets you more songs for less per song — see plans
+              </Text>
+            </TouchableOpacity>
           </View>
 
           {/* Downloads */}
@@ -402,7 +489,86 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
 
-  // Buy tokens
+  // Purchased (non-expiring) credits
+  purchasedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginTop: 8,
+  },
+  purchasedText: {
+    color: '#FBBF24',
+    fontSize: 11,
+    fontFamily: 'Oswald-Regular',
+  },
+
+  // Buy more credits
+  packsRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  packCard: {
+    flex: 1,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+    paddingHorizontal: 10,
+    paddingVertical: 14,
+    alignItems: 'center',
+    gap: 4,
+  },
+  bestValueTag: {
+    position: 'absolute',
+    top: -8,
+    backgroundColor: '#66cc33',
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  bestValueTagText: {
+    color: '#0d1117',
+    fontSize: 8,
+    fontFamily: 'Oswald-Bold',
+    letterSpacing: 0.4,
+  },
+  packName: {
+    color: '#fff',
+    fontSize: 13,
+    fontFamily: 'Oswald-Bold',
+    textAlign: 'center',
+    marginTop: 4,
+  },
+  packSongs: {
+    color: 'rgba(255,255,255,0.45)',
+    fontSize: 11,
+    fontFamily: 'Oswald-Regular',
+  },
+  packPriceRow: {
+    minHeight: 22,
+    justifyContent: 'center',
+    marginTop: 4,
+  },
+  packPrice: {
+    color: '#66cc33',
+    fontSize: 15,
+    fontFamily: 'Oswald-Bold',
+  },
+  subscribeNudge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 14,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.08)',
+  },
+  subscribeNudgeText: {
+    flex: 1,
+    color: 'rgba(255,255,255,0.5)',
+    fontSize: 11,
+    fontFamily: 'Oswald-Regular',
+  },
 
   // Downloads
   downloadsValue: {

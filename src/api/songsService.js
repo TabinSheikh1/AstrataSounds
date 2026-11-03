@@ -6,8 +6,9 @@ export const getMySongs = async () => {
   return response.data;
 };
 
-export const getAllSongs = async () => {
-  const response = await API.get("/songs");
+// search (optional): matches title or description, server-side — not a frontend filter.
+export const getAllSongs = async (search) => {
+  const response = await API.get("/songs", { params: search ? { search } : undefined });
   return response.data;
 };
 

@@ -58,7 +58,7 @@ export const CATEGORIES = [
   { label: "Christian Rock", value: "Christian Rock" },
   { label: "Christian Pop", value: "Christian Pop" },
   { label: "Spiritual", value: "Spiritual" },
-  { label: "Negro Spiritual", value: "Negro Spiritual" },
+  { label: "Black Spiritual", value: "Black Spiritual" },
   { label: "Gospel Blues", value: "Gospel Blues" },
   { label: "Rock", value: "Rock" },
   { label: "Classic Rock", value: "Classic Rock" },

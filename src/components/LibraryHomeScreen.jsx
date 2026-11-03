@@ -331,7 +331,7 @@ const GENRE_OPTIONS = [
   { label: "Christian Rock", value: 'christian_rock' },
   { label: "Christian Pop", value: 'christian_pop' },
   { label: "Spiritual", value: 'spiritual' },
-  { label: "Negro Spiritual", value: 'negro_spiritual' },
+  { label: "Black Spiritual", value: 'black_spiritual' },
   { label: "Gospel Blues", value: 'gospel_blues' },
   { label: "Rock", value: 'rock' },
   { label: "Classic Rock", value: 'classic_rock' },

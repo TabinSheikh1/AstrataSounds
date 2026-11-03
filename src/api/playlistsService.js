@@ -1,7 +1,8 @@
 import API from "./axiosInstance";
 
-export const getAllPlaylists = async () => {
-  const response = await API.get("/playlists");
+// search (optional): matches the playlist name, server-side — not a frontend filter.
+export const getAllPlaylists = async (search) => {
+  const response = await API.get("/playlists", { params: search ? { search } : undefined });
   return response.data;
 };
 

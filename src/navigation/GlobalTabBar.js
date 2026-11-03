@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import LinearGradient from 'react-native-linear-gradient';
-import { navigationRef } from '../../App';
+import { navigationRef } from './navigationRef';
 import { tabBarStore, useActiveTabRoute } from './tabBarStore';
 
 const TABS = [
