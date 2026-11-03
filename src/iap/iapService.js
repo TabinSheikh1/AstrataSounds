@@ -10,7 +10,7 @@ import {
   purchaseErrorListener,
   ErrorCode,
 } from 'react-native-iap';
-import { ALL_SUBSCRIPTION_SKUS, ALL_CONSUMABLE_SKUS, CREDIT_PACK_SKUS, CREDIT_PACKS } from './products';
+import { ALL_SUBSCRIPTION_SKUS, ALL_CONSUMABLE_SKUS } from './products';
 import { verifyPurchase } from '../api/billingService';
 import { getMySubscription, getTokenBalance } from '../api/subscriptionsService';
 import { store } from '../store/store';
@@ -18,18 +18,9 @@ import { setSubscription, setTokens } from '../store/slices/subscriptionSlice';
 import { getErrorMessage } from '../utils/errorHandler';
 import { navigate } from '../navigation/navigationRef';
 
-// Set right before dispatching a subscription purchase, consumed by the next event the
-// listener below handles. purchaseUpdatedListener fires for more than just "the purchase
-// you just made" — it also redelivers any unfinished transaction on initConnection()/
-// restorePurchases() (e.g. a previous purchase whose verify-purchase call failed). Without
-// this guard, that redelivery landing on an unrelated app launch would yank the user to
-// SubscriptionSuccessScreen out of nowhere. Only a purchase requested in this session, via
-// purchaseSubscription() below, should trigger that navigation.
 let pendingSubscriptionPurchase = false;
 
-// Mirrors useSubscription()'s refreshAll() — duplicated rather than imported
-// because hooks can't be called outside a component, and this listener fires
-// from native events, not React render.
+
 async function refreshSubscriptionState() {
   try {
     const [subRes, tokensRes] = await Promise.all([getMySubscription(), getTokenBalance()]);
@@ -43,9 +34,7 @@ async function refreshSubscriptionState() {
 let purchaseUpdateSub = null;
 let purchaseErrorSub = null;
 
-// Call once at app start (mirrors src/player/setupPlayer.js). Opens the store
-// connection and wires the event-based purchase result handling — requestPurchase()
-// itself does NOT resolve with the purchase outcome, everything comes through here.
+
 export async function initIAP() {
   const connected = await initConnection();
   if (!connected) {
@@ -66,8 +55,9 @@ export async function initIAP() {
       // leaves the purchase pending for retry instead of silently losing it.
       await verifyPurchase(purchase);
 
-      const productId = purchase.productId ?? purchase.id;
-      const isConsumable = ALL_CONSUMABLE_SKUS.includes(productId);
+      const isConsumable = ALL_CONSUMABLE_SKUS.includes(
+        purchase.productId ?? purchase.id,
+      );
       // The backend already granted the purchase at this point, so a failure while
       // finishing it (e.g. Android's acknowledge, which the backend also does) must not
       // stop the subscription state from refreshing.
@@ -77,28 +67,14 @@ export async function initIAP() {
         console.warn('[IAP] finishTransaction failed after a verified purchase', finishErr);
       }
 
-      // Token balance can change from either kind of purchase — a subscription grants its
-      // monthly tokens, a credit pack adds to purchasedBalance — so refresh for both,
-      // not just subscriptions (this used to only happen for !isConsumable, which meant a
-      // credit pack purchase never updated the wallet shown in the app without a manual
-      // pull-to-refresh elsewhere).
-      await refreshSubscriptionState();
-
       if (!isConsumable) {
+        await refreshSubscriptionState();
         // Only jump the user over for a subscription they just bought in this session —
         // not for a renewal/restore/old-pending-transaction redelivery landing on some
         // unrelated screen. SubscriptionSuccessScreen itself re-confirms (it polls
         // getMySubscription) and its "Start Creating" button lands on Home.
         if (wasRequestedThisSession) {
           navigate('SubscriptionSuccessScreen');
-        }
-      } else {
-        const pack = CREDIT_PACKS.find((p) => p.sku === productId);
-        if (pack) {
-          Alert.alert(
-            'Credits Added! 🎉',
-            `${pack.tokenAmount.toLocaleString()} tokens (${pack.songs} songs) have been added to your wallet.`,
-          );
         }
       }
     } catch (err) {
@@ -151,12 +127,6 @@ export async function getSubscriptionProducts() {
 
 export async function getConsumableProducts() {
   return fetchProducts({ skus: ALL_CONSUMABLE_SKUS, type: 'in-app' });
-}
-
-// Just the 3 token packs — deliberately excludes the cover-art SKUs (part of
-// ALL_CONSUMABLE_SKUS) since those have no backend handling yet (see products.js).
-export async function getCreditPackProducts() {
-  return fetchProducts({ skus: CREDIT_PACK_SKUS, type: 'in-app' });
 }
 
 // Result arrives via the purchaseUpdatedListener set up in initIAP(), not this
