@@ -102,3 +102,11 @@ export const transcribeVoice = async (fileUri, language, signal) => {
   });
   return response.data?.data ?? response.data;
 };
+
+// Optional singer voices (from Kits AI) the user can pick while generating a song.
+// Each has a demoUrl clip for previewing.
+export const getSingerVoices = async () => {
+  const response = await API.get("/voices");
+  const body = response.data;
+  return Array.isArray(body) ? body : body?.data ?? [];
+};

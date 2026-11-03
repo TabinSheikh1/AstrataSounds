@@ -23,6 +23,7 @@ const LyricsTab = ({
     selectedLanguage, setSelectedLanguage,
     vibes, selectedVibeId, setSelectedVibeId, vibesLoading,
     onRecordVoice, tempoBpm, setTempoBpm,
+    selectedVoice, onPickVoice,
 }) => (
     <ScrollView style={styles.tabContent} contentContainerStyle={styles.tabContentInner} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
 
@@ -74,6 +75,25 @@ const LyricsTab = ({
             </View>
             <MaterialIcons name="keyboard-arrow-down" size={20} color="rgba(255,255,255,0.5)" />
         </TouchableOpacity>
+
+        {/* Singer voice (optional) — not offered for instrumental songs */}
+        {!instrumental && (
+            <TouchableOpacity
+                style={styles.genreSelectBtn}
+                onPress={onPickVoice}
+                activeOpacity={0.8}
+                testID="singer-voice-btn"
+            >
+                <MaterialIcons name="record-voice-over" size={18} color="#66cc33" />
+                <View style={{ flex: 1 }}>
+                    <Text style={styles.genreSelectText}>Singer Voice (optional)</Text>
+                    <Text style={styles.genreSelectValue} numberOfLines={1}>
+                        {selectedVoice ? selectedVoice.name : 'Default AI voice'}
+                    </Text>
+                </View>
+                <MaterialIcons name="keyboard-arrow-down" size={20} color="rgba(255,255,255,0.5)" />
+            </TouchableOpacity>
+        )}
 
         {/* Song Length — shapes how much the AI writes, not a trim applied afterward */}
         <SectionLabel icon="straighten" title="Song Length" />

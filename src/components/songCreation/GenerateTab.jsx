@@ -24,6 +24,7 @@ const GenerateTab = ({
     imagePrompt,
     instrumental,
     selectedLanguage,
+    selectedVoice,
     titleText, setTitleText,
     description, setDescription,
     totalBalance,
@@ -71,6 +72,12 @@ const GenerateTab = ({
             value: instrumental ? 'Instrumental only' : 'With vocals',
             done: true,
         },
+        ...(instrumental ? [] : [{
+            icon: 'record-voice-over',
+            label: 'Singer',
+            value: selectedVoice?.name ?? 'Default AI voice',
+            done: true,
+        }]),
         {
             icon: 'language',
             label: 'Language',

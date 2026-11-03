@@ -19,6 +19,7 @@ import { styles } from './songCreation/songCreationStyles';
 import MoodPickerModal from './songCreation/MoodPickerModal';
 import GenrePickerModal from './songCreation/GenrePickerModal';
 import GeneratingOverlay from './songCreation/GeneratingOverlay';
+import VoicePickerModal from './songCreation/VoicePickerModal';
 import VoiceRecorderModal from './songCreation/VoiceRecorderModal';
 import LyricsTab from './songCreation/LyricsTab';
 import CoverTab from './songCreation/CoverTab';
@@ -120,6 +121,8 @@ const SongCreationScreen = () => {
     const [titleText, setTitleText]         = useState('');
     const [description, setDescription]     = useState('');
     const [selectedLanguage, setSelectedLanguage] = useState('english');
+    const [selectedVoice, setSelectedVoice] = useState(null); // optional Kits singer { id, name }
+    const [showVoicePicker, setShowVoicePicker] = useState(false);
 
     // Generation
     const [generating, setGenerating] = useState(false);
@@ -204,6 +207,7 @@ const SongCreationScreen = () => {
         setTitleText('');
         setDescription('');
         setSelectedLanguage('english');
+        setSelectedVoice(null);
     };
 
     const handleGenerate = async () => {
@@ -262,6 +266,7 @@ const SongCreationScreen = () => {
                 songLength: selectedSongLength,
                 ...(isManualLyrics ? { lyrics: lyricsText.trim() } : {}),
                 ...(tempoBpm ? { tempoBpm } : {}),
+                ...(selectedVoice && !instrumental ? { voiceModelId: selectedVoice.id } : {}),
                 ...(!isManualLyrics && selectedMood && !selectedVibeId ? { mood: selectedMood } : {}),
                 ...(!isManualLyrics && lyricsPrompt.trim() ? { lyricsPrompt: lyricsPrompt.trim() } : {}),
                 ...(selectedVibeId ? { vibeId: selectedVibeId } : { prompt: promptValue || 'A beautiful well-crafted song' }),
@@ -305,6 +310,8 @@ const SongCreationScreen = () => {
                     vibesLoading={vibesLoading}
                     onRecordVoice={() => setShowVoiceModal(true)}
                     tempoBpm={tempoBpm} setTempoBpm={setTempoBpm}
+                    selectedVoice={selectedVoice}
+                    onPickVoice={() => setShowVoicePicker(true)}
                 />
             </Animated.View>
         );
@@ -336,6 +343,7 @@ const SongCreationScreen = () => {
                     titleText={titleText} setTitleText={setTitleText}
                     description={description} setDescription={setDescription}
                     selectedLanguage={selectedLanguage}
+                    selectedVoice={selectedVoice}
                     totalBalance={totalBalance}
                     handleGenerate={handleGenerate}
                     generating={generating}
@@ -407,6 +415,15 @@ const SongCreationScreen = () => {
                 selectedCategory={selectedCategory}
                 onSelect={handleGenreSelect}
                 onClose={() => setShowGenrePicker(false)}
+            />
+            <VoicePickerModal
+                visible={showVoicePicker}
+                selectedVoiceId={selectedVoice?.id ?? null}
+                onSelect={(voice) => {
+                    setSelectedVoice(voice ? { id: voice.id, name: voice.name } : null);
+                    setShowVoicePicker(false);
+                }}
+                onClose={() => setShowVoicePicker(false)}
             />
             <VoiceRecorderModal
                 visible={showVoiceModal}
