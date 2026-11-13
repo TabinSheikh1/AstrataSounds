@@ -14,9 +14,8 @@ import { ALL_SUBSCRIPTION_SKUS, ALL_CONSUMABLE_SKUS, CREDIT_PACK_SKUS, CREDIT_PA
 import { verifyPurchase } from '../api/billingService';
 import { getMySubscription, getTokenBalance } from '../api/subscriptionsService';
 import { store } from '../store/store';
-import { setSubscription, setTokens } from '../store/slices/subscriptionSlice';
+import { setSubscription, setTokens, purchaseStarted, purchaseSucceeded, purchaseDismissed } from '../store/slices/subscriptionSlice';
 import { getErrorMessage } from '../utils/errorHandler';
-import { navigate } from '../navigation/navigationRef';
 
 // Set right before dispatching a subscription purchase, consumed by the next event the
 // listener below handles. purchaseUpdatedListener fires for more than just "the purchase
@@ -84,21 +83,24 @@ export async function initIAP() {
       // pull-to-refresh elsewhere).
       await refreshSubscriptionState();
 
-      if (!isConsumable) {
-        // Only jump the user over for a subscription they just bought in this session —
-        // not for a renewal/restore/old-pending-transaction redelivery landing on some
-        // unrelated screen. SubscriptionSuccessScreen itself re-confirms (it polls
-        // getMySubscription) and its "Start Creating" button lands on Home.
-        if (wasRequestedThisSession) {
-          navigate('SubscriptionSuccessScreen');
-        }
-      } else {
-        const pack = CREDIT_PACKS.find((p) => p.sku === productId);
-        if (pack) {
-          Alert.alert(
-            'Credits Added! 🎉',
-            `${pack.tokenAmount.toLocaleString()} tokens (${pack.songs} songs) have been added to your wallet.`,
-          );
+      // Only celebrate a purchase the user actually started in this session — not a
+      // renewal/restore/old-pending redelivery on app launch (those arrive with the
+      // status already 'idle').
+      const wasPending = store.getState().subscription?.purchaseStatus === 'pending';
+      if (wasPending) {
+        if (!isConsumable) {
+          store.dispatch(purchaseSucceeded({
+            title: "You're all set! 🎉",
+            message: 'Your subscription is active and your credits have been added to your account.',
+          }));
+        } else {
+          const pack = CREDIT_PACKS.find((p) => p.sku === productId);
+          store.dispatch(purchaseSucceeded({
+            title: 'Credits Added! 🎉',
+            message: pack
+              ? `${pack.tokenAmount.toLocaleString()} tokens (${pack.songs} songs) have been added to your wallet.`
+              : 'Your credits have been added to your wallet.',
+          }));
         }
       }
     } catch (err) {
@@ -106,6 +108,7 @@ export async function initIAP() {
       // anything — this must never fail silently. The transaction is left unfinished, so
       // StoreKit/Play Billing will redeliver it to this same listener on next launch/restore.
       console.error('[IAP] Failed to verify/finish purchase', err);
+      store.dispatch(purchaseDismissed());
       Alert.alert(
         'Purchase Not Confirmed',
         getErrorMessage(
@@ -119,6 +122,7 @@ export async function initIAP() {
 
   purchaseErrorSub = purchaseErrorListener((error) => {
     pendingSubscriptionPurchase = false;
+    store.dispatch(purchaseDismissed());
 
     // This is where a cancel actually surfaces — requestPurchase()'s own promise does NOT
     // reject for it (store outcomes are event-based), so CheckoutConfirmModal's try/catch
@@ -132,6 +136,10 @@ export async function initIAP() {
       return;
     }
     console.error('[IAP] Purchase error', error);
+    Alert.alert(
+      'Purchase Error',
+      `${getErrorMessage(error, 'The store could not start this purchase.')}${error?.code ? `\n\n(code: ${error.code})` : ''}`,
+    );
   });
 
   return true;
@@ -163,6 +171,7 @@ export async function getCreditPackProducts() {
 // call's return value.
 export async function purchaseSubscription(sku) {
   pendingSubscriptionPurchase = true;
+  store.dispatch(purchaseStarted());
   try {
     if (Platform.OS === 'android') {
       // Play Billing needs the base plan's offer token to start a subscription purchase,
@@ -187,15 +196,22 @@ export async function purchaseSubscription(sku) {
     // Dispatch itself failed (bad sku, not connected, etc) — no purchase was ever placed,
     // so there's nothing for the listener to redeem this flag against.
     pendingSubscriptionPurchase = false;
+    store.dispatch(purchaseDismissed());
     throw err;
   }
 }
 
 export async function purchaseConsumable(sku) {
-  return requestPurchase({
-    request: { apple: { sku }, google: { skus: [sku] } },
-    type: 'in-app',
-  });
+  store.dispatch(purchaseStarted());
+  try {
+    return await requestPurchase({
+      request: { apple: { sku }, google: { skus: [sku] } },
+      type: 'in-app',
+    });
+  } catch (err) {
+    store.dispatch(purchaseDismissed());
+    throw err;
+  }
 }
 
 // Re-syncs with the store; any active/pending purchases are redelivered through

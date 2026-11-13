@@ -4,6 +4,7 @@ import { useSelector } from 'react-redux';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useSubscription } from '../hooks/useSubscription';
 import TrialOnboardingModal from '../components/TrialOnboardingModal';
+import PurchaseStatusOverlay from '../components/PurchaseStatusOverlay';
 import GlobalTabBar from './GlobalTabBar';
 
 import SplashScreen from '../components/SplashScreen';
@@ -111,6 +112,7 @@ const AppNavigator = () => {
       </View>
       <GlobalTabBar />
       <TrialOnboardingModal isVisible={showWelcomeModal && status === 'free'} />
+      <PurchaseStatusOverlay />
     </View>
   );
 };

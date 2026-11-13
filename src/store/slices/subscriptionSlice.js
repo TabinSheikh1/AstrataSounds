@@ -7,6 +7,8 @@ const initialState = {
   isLoading: false,
   tokensLoading: false,
   error: null,
+  purchaseStatus: 'idle', // 'idle' | 'pending' | 'success'
+  purchaseResult: null,   // { title, message } shown on success
 };
 
 const subscriptionSlice = createSlice({
@@ -44,6 +46,18 @@ const subscriptionSlice = createSlice({
       state.isLoading = false;
       state.tokensLoading = false;
     },
+    purchaseStarted(state) {
+      state.purchaseStatus = 'pending';
+      state.purchaseResult = null;
+    },
+    purchaseSucceeded(state, action) {
+      state.purchaseStatus = 'success';
+      state.purchaseResult = action.payload;
+    },
+    purchaseDismissed(state) {
+      state.purchaseStatus = 'idle';
+      state.purchaseResult = null;
+    },
   },
 });
 
@@ -55,6 +69,9 @@ export const {
   subscriptionTokensLoading,
   subscriptionError,
   clearSubscription,
+  purchaseStarted,
+  purchaseSucceeded,
+  purchaseDismissed,
 } = subscriptionSlice.actions;
 
 export default subscriptionSlice.reducer;
