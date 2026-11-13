@@ -53,39 +53,22 @@ export async function initIAP() {
   }
 
   purchaseUpdateSub = purchaseUpdatedListener(async (purchase) => {
-    // Consume the flag now — this event is the one result for whatever request set it
-    // (or it's an unrelated redelivery, in which case it was already false).
-    const wasRequestedThisSession = pendingSubscriptionPurchase;
     pendingSubscriptionPurchase = false;
 
+    const productId = purchase.productId ?? purchase.id;
+    const isConsumable = ALL_CONSUMABLE_SKUS.includes(productId);
+
     try {
-      // The backend verifies the receipt/token directly with Apple/Google and
-      // grants tokens or plan access — only finish the transaction (clearing it
-      // from the store's queue) once that's confirmed, so a network failure here
-      // leaves the purchase pending for retry instead of silently losing it.
       await verifyPurchase(purchase);
 
-      const productId = purchase.productId ?? purchase.id;
-      const isConsumable = ALL_CONSUMABLE_SKUS.includes(productId);
-      // The backend already granted the purchase at this point, so a failure while
-      // finishing it (e.g. Android's acknowledge, which the backend also does) must not
-      // stop the subscription state from refreshing.
       try {
         await finishTransaction({ purchase, isConsumable });
       } catch (finishErr) {
         console.warn('[IAP] finishTransaction failed after a verified purchase', finishErr);
       }
 
-      // Token balance can change from either kind of purchase — a subscription grants its
-      // monthly tokens, a credit pack adds to purchasedBalance — so refresh for both,
-      // not just subscriptions (this used to only happen for !isConsumable, which meant a
-      // credit pack purchase never updated the wallet shown in the app without a manual
-      // pull-to-refresh elsewhere).
       await refreshSubscriptionState();
 
-      // Only celebrate a purchase the user actually started in this session — not a
-      // renewal/restore/old-pending redelivery on app launch (those arrive with the
-      // status already 'idle').
       const wasPending = store.getState().subscription?.purchaseStatus === 'pending';
       if (wasPending) {
         if (!isConsumable) {
@@ -104,19 +87,30 @@ export async function initIAP() {
         }
       }
     } catch (err) {
-      // Money has already moved (the store sheet succeeded) but our server didn't grant
-      // anything — this must never fail silently. The transaction is left unfinished, so
-      // StoreKit/Play Billing will redeliver it to this same listener on next launch/restore.
       console.error('[IAP] Failed to verify/finish purchase', err);
       store.dispatch(purchaseDismissed());
-      Alert.alert(
-        'Purchase Not Confirmed',
-        getErrorMessage(
-          err,
-          "Your payment went through, but we couldn't confirm it with our server yet. " +
-            "We'll keep retrying — please reopen the app in a few minutes, or contact support if this persists.",
-        ),
-      );
+
+      const httpStatus = err?.response?.status ?? err?.status;
+      const permanent = typeof httpStatus === 'number' && httpStatus >= 400 && httpStatus < 500;
+
+      if (permanent) {
+        try {
+          await finishTransaction({ purchase, isConsumable });
+        } catch (_) {}
+        Alert.alert(
+          'Purchase Not Applied',
+          `${getErrorMessage(err, 'This purchase could not be applied to your account.')}\n\nIf you bought this with the same Apple ID on another account, use that account or a different Apple ID.`,
+        );
+      } else {
+        Alert.alert(
+          'Purchase Not Confirmed',
+          getErrorMessage(
+            err,
+            "Your payment went through, but we couldn't confirm it with our server yet. " +
+              "We'll keep retrying — please reopen the app in a few minutes, or contact support if this persists.",
+          ),
+        );
+      }
     }
   });
 
