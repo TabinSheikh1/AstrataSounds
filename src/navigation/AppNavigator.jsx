@@ -3,7 +3,7 @@ import { View, StyleSheet } from 'react-native';
 import { useSelector } from 'react-redux';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useSubscription } from '../hooks/useSubscription';
-import WelcomeTokensModal from '../components/WelcomeTokensModal';
+import TrialOnboardingModal from '../components/TrialOnboardingModal';
 import GlobalTabBar from './GlobalTabBar';
 
 import SplashScreen from '../components/SplashScreen';
@@ -72,7 +72,7 @@ const AppStack = () => (
 
 const AppNavigator = () => {
   const { isAuthenticated, showWelcomeModal } = useSelector((state) => state.auth);
-  const { refreshAll, fetchPlans } = useSubscription();
+  const { refreshAll, fetchPlans, status } = useSubscription();
   const [showSplash, setShowSplash] = useState(true);
   const [showReview, setShowReview] = useState(false);
 
@@ -110,7 +110,7 @@ const AppNavigator = () => {
         <AppStack />
       </View>
       <GlobalTabBar />
-      <WelcomeTokensModal isVisible={showWelcomeModal} />
+      <TrialOnboardingModal isVisible={showWelcomeModal && status === 'free'} />
     </View>
   );
 };

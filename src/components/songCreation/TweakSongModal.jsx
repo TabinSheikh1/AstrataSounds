@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import {
-    View, Text, StyleSheet, Modal, TouchableOpacity, TextInput,
+    View, Text, StyleSheet, Modal, TouchableOpacity, TextInput, Image,
     ScrollView, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Switch,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import { launchImageLibrary } from 'react-native-image-picker';
 import { LANGUAGES } from './constants';
 import GenrePickerModal from './GenrePickerModal';
 import MoodPickerModal from './MoodPickerModal';
-import { tweakSongAudio } from '../../api/songsService';
+import VoicePickerModal from './VoicePickerModal';
+import { tweakSongAudio, updateSong, uploadSongImage } from '../../api/songsService';
+import { SERVER_URL as FILE_BASE } from '../../config/api';
 import { waitForSongGeneration } from '../../utils/waitForSongGeneration';
 import { getErrorMessage } from '../../utils/errorHandler';
 import { getTweakState } from '../../utils/tweakState';
@@ -17,11 +20,6 @@ const MIN_BPM = 40;
 const MAX_BPM = 220;
 const DEFAULT_BPM = 100;
 
-// Free, capped regeneration of a song's audio only (never the cover image) while it's
-// still in draft — see songs.service.ts tweakSong() for the server-side cap/lock.
-// The sheet opens pre-filled with the settings saved with the song (genre, style, mood,
-// language, tempo), so a tweak changes only what the user edits and everything else carries
-// over to the new version. Songs from before settings were saved open blank and need a genre.
 const TweakSongModal = ({ visible, onClose, song, onTweaked }) => {
     const [category, setCategory] = useState(null);
     const [styleText, setStyleText] = useState('');
@@ -33,18 +31,21 @@ const TweakSongModal = ({ visible, onClose, song, onTweaked }) => {
     const [showMoodPicker, setShowMoodPicker] = useState(false);
     const [submitting, setSubmitting] = useState(false);
 
-    // Lyrics: prefilled with the song's current lyrics so the user can edit them directly.
-    // Toggling "Improve with AI" hands the lyrics over to the AI instead (using the mood
-    // below + these instructions) rather than saving the edited text as-is.
     const [lyricsText, setLyricsText] = useState('');
     const [aiRewriteLyrics, setAiRewriteLyrics] = useState(false);
     const [lyricsPrompt, setLyricsPrompt] = useState('');
 
+    const [titleText, setTitleText] = useState('');
+    const [description, setDescription] = useState('');
+
+    const [selectedVoice, setSelectedVoice] = useState(null);
+    const [showVoicePicker, setShowVoicePicker] = useState(false);
+
+    const [newCoverImage, setNewCoverImage] = useState(null);
+
     const tweak = getTweakState(song);
     const saved = song?.generationSettings ?? null;
 
-    // Pre-fill from the song's saved settings every time the sheet opens, and the lyrics
-    // straight from the song so they're ready to edit.
     useEffect(() => {
         if (visible) {
             setCategory(saved?.category ?? null);
@@ -56,14 +57,30 @@ const TweakSongModal = ({ visible, onClose, song, onTweaked }) => {
             setLyricsText(song?.lyrics ?? '');
             setAiRewriteLyrics(false);
             setLyricsPrompt('');
+            setTitleText(song?.title ?? '');
+            setDescription(song?.description ?? '');
+            setSelectedVoice(
+                saved?.voiceModelId != null
+                    ? { id: saved.voiceModelId, name: saved.voiceName ?? 'Selected voice' }
+                    : null,
+            );
+            setNewCoverImage(null);
         }
-        // Only when the sheet opens — a background refresh of `song` must not wipe edits.
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [visible]);
+
+    const pickCover = async () => {
+        const result = await launchImageLibrary({ mediaType: 'photo', quality: 0.85, selectionLimit: 1 });
+        if (!result.didCancel && result.assets?.[0]) setNewCoverImage(result.assets[0]);
+    };
 
     const handleSubmit = async () => {
         if (tweak.left <= 0) {
             Alert.alert('No free tweaks left', 'Finalize this song to keep this version, or create a new song.');
+            return;
+        }
+        if (!titleText.trim()) {
+            Alert.alert('Name required', 'Give the song a name.');
             return;
         }
         if (!category) {
@@ -81,21 +98,33 @@ const TweakSongModal = ({ visible, onClose, song, onTweaked }) => {
 
         setSubmitting(true);
         try {
+            const nameChanged = titleText.trim() !== (song?.title ?? '');
+            const descChanged = description.trim() !== (song?.description ?? '');
+            if (nameChanged || descChanged) {
+                await updateSong(song.id, { title: titleText.trim(), description: description.trim() });
+            }
+
+            if (newCoverImage) {
+                const fd = new FormData();
+                fd.append('image', {
+                    uri: newCoverImage.uri,
+                    name: newCoverImage.fileName ?? 'cover.jpg',
+                    type: newCoverImage.type ?? 'image/jpeg',
+                });
+                await uploadSongImage(song.id, fd);
+            }
+
             const payload = {
                 category,
                 language: selectedLanguage,
-                // null (not omitted) tells the server to clear a saved mood / tempo
                 mood: selectedMood ?? null,
                 tempoBpm: tempoOn ? bpm : null,
-                // A blank style is left out so the song keeps its saved style instead of
-                // being overwritten with a generic placeholder.
+                voiceModelId: selectedVoice?.id ?? null,
                 ...(styleText.trim() ? { prompt: styleText.trim() } : {}),
                 ...(aiRewriteLyrics
                     ? { lyricsMode: 'ai', ...(lyricsPrompt.trim() ? { lyricsPrompt: lyricsPrompt.trim() } : {}) }
                     : { lyricsMode: 'manual', lyrics: lyricsText.trim() }),
             };
-            // The server accepts the job and keeps working even if the phone locks; we watch
-            // the SAME song until its new version is ready (a tweak never creates a new song).
             await tweakSongAudio(song.id, payload);
             const updated = await waitForSongGeneration(song.id);
             onTweaked?.(updated);
@@ -107,7 +136,6 @@ const TweakSongModal = ({ visible, onClose, song, onTweaked }) => {
         }
     };
 
-    // Can't dismiss while the tweak is running.
     const guardedClose = () => { if (!submitting) onClose(); };
 
     return (
@@ -123,7 +151,7 @@ const TweakSongModal = ({ visible, onClose, song, onTweaked }) => {
                         <View style={{ flex: 1 }}>
                             <Text style={styles.title}>Tweak Song</Text>
                             <Text style={styles.subtitle}>
-                                {tweak.left} of {tweak.limit} free tweaks left — cover art stays as-is; edit the lyrics below or let AI rewrite them
+                                {tweak.left} of {tweak.limit} free tweaks left — edit the name, lyrics, voice and more; upload a new cover if you like
                                 {saved ? '. Starting from your song\'s current settings: change only what you want.' : ''}
                             </Text>
                         </View>
@@ -133,6 +161,28 @@ const TweakSongModal = ({ visible, onClose, song, onTweaked }) => {
                     </View>
 
                     <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+                        <Text style={styles.fieldLabel}>Song Name</Text>
+                        <TextInput
+                            style={styles.textInput}
+                            placeholder="Name your song..."
+                            placeholderTextColor="rgba(255,255,255,0.4)"
+                            maxLength={120}
+                            value={titleText}
+                            onChangeText={setTitleText}
+                        />
+
+                        <Text style={styles.fieldLabel}>Song Description</Text>
+                        <TextInput
+                            style={[styles.textArea, { minHeight: 60 }]}
+                            placeholder="Describe your song (optional)..."
+                            placeholderTextColor="rgba(255,255,255,0.4)"
+                            multiline
+                            maxLength={500}
+                            value={description}
+                            onChangeText={setDescription}
+                        />
+
+                        <View style={{ marginTop: 16 }} />
                         <TouchableOpacity style={styles.selectBtn} onPress={() => setShowGenrePicker(true)} activeOpacity={0.8}>
                             <MaterialIcons name="queue-music" size={18} color="#66cc33" />
                             <View style={{ flex: 1 }}>
@@ -232,6 +282,58 @@ const TweakSongModal = ({ visible, onClose, song, onTweaked }) => {
                             })}
                         </View>
 
+                        <Text style={styles.fieldLabel}>Singer Voice (optional)</Text>
+                        {selectedVoice ? (
+                            <View style={styles.voiceSelected}>
+                                <MaterialIcons name="record-voice-over" size={16} color="#66cc33" />
+                                <Text style={styles.voiceSelectedText}>{selectedVoice.name}</Text>
+                                <TouchableOpacity onPress={() => setShowVoicePicker(true)} style={styles.voiceChangeBtn}>
+                                    <Text style={styles.voiceChangeText}>Change</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity onPress={() => setSelectedVoice(null)}>
+                                    <MaterialIcons name="close" size={14} color="rgba(255,255,255,0.5)" />
+                                </TouchableOpacity>
+                            </View>
+                        ) : (
+                            <TouchableOpacity style={styles.selectBtn} onPress={() => setShowVoicePicker(true)} activeOpacity={0.8}>
+                                <MaterialIcons name="record-voice-over" size={18} color="#66cc33" />
+                                <View style={{ flex: 1 }}>
+                                    <Text style={styles.selectLabel}>Voice</Text>
+                                    <Text style={styles.selectValue}>Default AI singer — tap to pick a voice</Text>
+                                </View>
+                                <MaterialIcons name="keyboard-arrow-down" size={20} color="rgba(255,255,255,0.5)" />
+                            </TouchableOpacity>
+                        )}
+
+                        <Text style={styles.fieldLabel}>Cover Photo</Text>
+                        <Text style={styles.coverNote}>
+                            AI cover generation isn't available here — you can upload your own cover photo instead. Leave it to keep the current cover.
+                        </Text>
+                        <View style={styles.coverRow}>
+                            {newCoverImage ? (
+                                <Image source={{ uri: newCoverImage.uri }} style={styles.coverThumb} />
+                            ) : song?.imagePath ? (
+                                <Image source={{ uri: `${FILE_BASE}${song.imagePath}` }} style={styles.coverThumb} />
+                            ) : (
+                                <View style={[styles.coverThumb, styles.coverThumbEmpty]}>
+                                    <MaterialIcons name="image" size={22} color="rgba(255,255,255,0.3)" />
+                                </View>
+                            )}
+                            <View style={{ flex: 1 }}>
+                                <TouchableOpacity style={styles.uploadBtn} onPress={pickCover} activeOpacity={0.85}>
+                                    <MaterialIcons name="file-upload" size={16} color="#66cc33" />
+                                    <Text style={styles.uploadBtnText}>
+                                        {newCoverImage ? 'Choose a different photo' : 'Upload a new cover photo'}
+                                    </Text>
+                                </TouchableOpacity>
+                                {newCoverImage && (
+                                    <TouchableOpacity onPress={() => setNewCoverImage(null)} style={styles.coverClearBtn}>
+                                        <Text style={styles.coverClearText}>Remove — keep current cover</Text>
+                                    </TouchableOpacity>
+                                )}
+                            </View>
+                        </View>
+
                         <View style={styles.tempoRow}>
                             <View style={{ flex: 1 }}>
                                 <Text style={styles.fieldLabel}>Tempo</Text>
@@ -297,6 +399,15 @@ const TweakSongModal = ({ visible, onClose, song, onTweaked }) => {
                 visible={showMoodPicker}
                 onSelect={(m) => { setSelectedMood(m); setShowMoodPicker(false); }}
                 onClose={() => setShowMoodPicker(false)}
+            />
+            <VoicePickerModal
+                visible={showVoicePicker}
+                selectedVoiceId={selectedVoice?.id ?? null}
+                onSelect={(voice) => {
+                    setSelectedVoice(voice ? { id: voice.id, name: voice.name } : null);
+                    setShowVoicePicker(false);
+                }}
+                onClose={() => setShowVoicePicker(false)}
             />
         </Modal>
     );
@@ -395,6 +506,94 @@ const styles = StyleSheet.create({
     },
     textAreaDisabled: {
         opacity: 0.4,
+    },
+    textInput: {
+        backgroundColor: 'rgba(255,255,255,0.05)',
+        borderRadius: 14,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.08)',
+        paddingHorizontal: 12,
+        paddingVertical: Platform.OS === 'ios' ? 12 : 8,
+        color: '#fff',
+        fontFamily: 'Oswald-Regular',
+        fontSize: 14,
+    },
+    voiceSelected: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        backgroundColor: 'rgba(102,204,51,0.1)',
+        borderRadius: 14,
+        borderWidth: 1,
+        borderColor: 'rgba(102,204,51,0.25)',
+        padding: 14,
+    },
+    voiceSelectedText: {
+        flex: 1,
+        color: '#fff',
+        fontFamily: 'Oswald-Regular',
+        fontSize: 12,
+    },
+    voiceChangeBtn: {
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 8,
+        backgroundColor: 'rgba(255,255,255,0.08)',
+    },
+    voiceChangeText: {
+        color: 'rgba(255,255,255,0.75)',
+        fontFamily: 'Oswald-Regular',
+        fontSize: 11,
+    },
+    coverNote: {
+        color: 'rgba(255,255,255,0.4)',
+        fontFamily: 'Oswald-Regular',
+        fontSize: 10.5,
+        lineHeight: 15,
+        marginBottom: 10,
+        marginTop: -2,
+    },
+    coverRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+    },
+    coverThumb: {
+        width: 56,
+        height: 56,
+        borderRadius: 10,
+        backgroundColor: 'rgba(255,255,255,0.05)',
+    },
+    coverThumbEmpty: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.08)',
+    },
+    uploadBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        paddingVertical: 11,
+        borderRadius: 12,
+        backgroundColor: 'rgba(255,255,255,0.05)',
+        borderWidth: 1,
+        borderColor: 'rgba(102,204,51,0.3)',
+    },
+    uploadBtnText: {
+        color: '#66cc33',
+        fontFamily: 'Oswald-Regular',
+        fontSize: 12.5,
+    },
+    coverClearBtn: {
+        marginTop: 6,
+        alignItems: 'center',
+    },
+    coverClearText: {
+        color: 'rgba(255,255,255,0.45)',
+        fontFamily: 'Oswald-Regular',
+        fontSize: 10.5,
     },
     lyricsHeaderRow: {
         flexDirection: 'row',

@@ -17,7 +17,7 @@ import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSelector } from 'react-redux';
 import { getAllSongs, getMySongs } from '../api/songsService';
-import { getAllPlaylists, toggleLikePlaylist } from '../api/playlistsService';
+import { getAllPlaylists, getMyPlaylists, toggleLikePlaylist } from '../api/playlistsService';
 import Header from './Header';
 import { SERVER_URL as FILE_BASE } from '../config/api';
 
@@ -199,6 +199,7 @@ const HomeScreen = () => {
   const [playlists, setPlaylists] = useState([]);
   const [playlistLikes, setPlaylistLikes] = useState({});
   const [mySongsCount, setMySongsCount] = useState(0);
+  const [myPlaylistsCount, setMyPlaylistsCount] = useState(0);
   const [songsLoading, setSongsLoading] = useState(false);
   const [playlistsLoading, setPlaylistsLoading] = useState(false);
 
@@ -208,11 +209,11 @@ const HomeScreen = () => {
     setSongsLoading(true);
     setPlaylistsLoading(true);
     try {
-      const [songsRes, playlistsRes, mySongsRes] = await Promise.all([
+      const [songsRes, playlistsRes, mySongsRes, myPlaylistsRes] = await Promise.all([
         getAllSongs().catch(() => ({})),
-        // Playlists are already sorted most-liked-first by the backend
         getAllPlaylists().catch(() => ({})),
         getMySongs().catch(() => ({})),
+        getMyPlaylists().catch(() => ({})),
       ]);
       setSongs(Array.isArray(songsRes) ? songsRes : (songsRes?.data ?? []));
       const playlistsList = Array.isArray(playlistsRes) ? playlistsRes : (playlistsRes?.data ?? []);
@@ -226,6 +227,8 @@ const HomeScreen = () => {
       });
       const mySongsList = Array.isArray(mySongsRes) ? mySongsRes : (mySongsRes?.data ?? []);
       setMySongsCount(mySongsList.length);
+      const myPlaylistsList = Array.isArray(myPlaylistsRes) ? myPlaylistsRes : (myPlaylistsRes?.data ?? []);
+      setMyPlaylistsCount(myPlaylistsList.length);
     } finally {
       setSongsLoading(false);
       setPlaylistsLoading(false);
@@ -295,7 +298,7 @@ const HomeScreen = () => {
               <View style={s.heroStats}>
                 <HeroStat label="My Songs" value={mySongsCount} loading={songsLoading} />
                 <View style={s.heroStatSep} />
-                <HeroStat label="Playlists" value={playlists.length} loading={playlistsLoading} />
+                <HeroStat label="Playlists" value={myPlaylistsCount} loading={playlistsLoading} />
               </View>
               <TouchableOpacity
                 onPress={() => navigation.navigate('SongCreationScreen')}

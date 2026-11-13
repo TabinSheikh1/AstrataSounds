@@ -71,8 +71,6 @@ export const verifyEmailOtp = (payload) => async (dispatch) => {
       })
     );
 
-    // Email verification is a one-time event per account — this is always
-    // the moment the free Spark trial (500 tokens) gets provisioned.
     dispatch(triggerWelcomeModal());
 
     return { success: true, data };
@@ -129,11 +127,25 @@ export const confirmPasswordReset = (data) => (dispatch) => {
   );
 };
 
+// The backend validates `type` against the OtpType enum *values*
+// ('email_verification' | 'password_reset'), but screens pass the uppercase
+// constant name ('EMAIL_VERIFICATION' | 'PASSWORD_RESET') as a route param.
+// Normalize here so the resend request isn't rejected with a 400 before the
+// server ever sends the email.
+const OTP_TYPE_MAP = {
+  EMAIL_VERIFICATION: "email_verification",
+  PASSWORD_RESET: "password_reset",
+};
+
 export const resendOtp = (payload) => async (dispatch) => {
   try {
     dispatch(authStart());
 
-    const data = await resendOtpRequest(payload);
+    const normalized = {
+      ...payload,
+      type: OTP_TYPE_MAP[payload?.type] ?? payload?.type,
+    };
+    const data = await resendOtpRequest(normalized);
 
     dispatch(clearAuthError());
 
